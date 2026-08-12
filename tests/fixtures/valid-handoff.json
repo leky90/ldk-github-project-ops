@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "issue": "example-org/product#42",
+  "outcome": "handoff",
+  "fromRole": "software-engineer",
+  "toRole": "qa",
+  "summary": "Launch implementation is ready for QA.",
+  "deliverables": ["Pull request #55"],
+  "dod": [
+    { "label": "Required tests pass", "passed": true }
+  ],
+  "evidence": [
+    { "label": "Pull request", "url": "https://github.com/example-org/product/pull/55" }
+  ],
+  "limitations": [],
+  "next": {
+    "action": "Review the current PR SHA and required checks",
+    "status": "In Review",
+    "role": "qa"
+  },
+  "delivery": {
+    "mode": "software-merge",
+    "phase": "artifact-review"
+  }
+}

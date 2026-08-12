@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "github": {
+    "owner": "example-org",
+    "projectNumber": 7,
+    "projectId": "PVT_example7",
+    "repositories": ["example-org/product"]
+  },
+  "fields": {
+    "status": "Status",
+    "role": "Role",
+    "priority": "Priority",
+    "deliveryPhase": "Delivery phase",
+    "estimate": "Estimate",
+    "startDate": "Start date",
+    "targetDate": "Target date",
+    "iteration": "Iteration"
+  },
+  "statuses": {
+    "refinement": "Refinement",
+    "ready": "Ready",
+    "inProgress": "In Progress",
+    "inReview": "In Review",
+    "readyToDeliver": "Ready to Deliver",
+    "deliveryVerification": "Delivery Verification",
+    "blocked": "Blocked",
+    "done": "Done",
+    "canceled": "Canceled"
+  },
+  "roles": ["cpo", "tech-lead", "software-engineer", "qa"]
+}

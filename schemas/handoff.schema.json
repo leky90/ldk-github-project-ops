@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ldktech.local/schemas/github-handoff.schema.json",
+  "title": "GitHub Role Handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "issue", "outcome", "fromRole", "toRole", "summary", "deliverables", "dod", "evidence", "next", "delivery"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "issue": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[1-9][0-9]*$" },
+    "outcome": { "enum": ["handoff", "review-passed", "changes-requested", "blocked", "delivered", "verification-passed"] },
+    "fromRole": { "$ref": "#/$defs/nonEmpty" },
+    "toRole": { "$ref": "#/$defs/nonEmpty" },
+    "summary": { "$ref": "#/$defs/nonEmpty" },
+    "deliverables": { "$ref": "#/$defs/nonEmptyList" },
+    "dod": { "$ref": "#/$defs/checkList" },
+    "evidence": { "$ref": "#/$defs/evidenceList" },
+    "limitations": { "type": "array", "items": { "$ref": "#/$defs/nonEmpty" } },
+    "next": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "status", "role"],
+      "properties": {
+        "action": { "$ref": "#/$defs/nonEmpty" },
+        "status": { "enum": ["Refinement", "Ready", "In Progress", "In Review", "Ready to Deliver", "Delivery Verification", "Blocked", "Done", "Canceled"] },
+        "role": { "$ref": "#/$defs/nonEmpty" }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "phase"],
+      "properties": {
+        "mode": { "enum": ["artifact-review", "publish", "external-action", "software-merge", "production-release", "operations-change"] },
+        "phase": { "enum": ["artifact-review", "ready-to-deliver", "delivery-verification", "terminal"] }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmpty": { "type": "string", "minLength": 1 },
+    "nonEmptyList": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/nonEmpty" } },
+    "checkList": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "passed"],
+        "properties": { "label": { "$ref": "#/$defs/nonEmpty" }, "passed": { "type": "boolean" } }
+      }
+    },
+    "evidenceList": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "url"],
+        "properties": { "label": { "$ref": "#/$defs/nonEmpty" }, "url": { "type": "string", "format": "uri" } }
+      }
+    }
+  }
+}

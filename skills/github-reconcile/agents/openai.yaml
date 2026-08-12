@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reconcile GitHub Project Work"
+  short_description: "Repair project fields, issue state, and evidence"
+  default_prompt: "Use $github-reconcile to repair inconsistent GitHub Project work."

@@ -1,0 +1,5 @@
+.github-project-ops.json
+.github-ops/
+node_modules/
+*.tgz
+.DS_Store

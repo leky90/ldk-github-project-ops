@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "mode": "preview",
+  "projectId": "PVT_example7",
+  "status": "AT_RISK",
+  "summary": "Launch validation is waiting on analytics approval.",
+  "progress": ["Implementation PR is ready for QA"],
+  "risks": ["Analytics decision is not approved"],
+  "evidence": [
+    { "label": "Decision issue", "url": "https://github.com/example-org/product/issues/44" }
+  ],
+  "nextActions": ["CPO approves the analytics event contract"]
+}

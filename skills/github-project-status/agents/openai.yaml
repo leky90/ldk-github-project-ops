@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Project Status"
+  short_description: "Report lifecycle, queues, risks, and delivery"
+  default_prompt: "Use $github-project-status to report this GitHub Project and recommend the next actions."

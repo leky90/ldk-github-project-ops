@@ -1,0 +1,4 @@
+interface:
+  display_name: "Do GitHub Project Issue"
+  short_description: "Perform one issue and hand off through GitHub"
+  default_prompt: "Use $github-do-issue to perform the requested GitHub issue and hand it to the next role."

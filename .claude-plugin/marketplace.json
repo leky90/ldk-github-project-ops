@@ -1,0 +1,15 @@
+{
+  "name": "ldk-github-project-ops-local",
+  "description": "Local development marketplace for LDK GitHub Project Ops.",
+  "owner": {
+    "name": "LDKTech Solutions"
+  },
+  "plugins": [
+    {
+      "name": "ldk-github-project-ops",
+      "source": "./",
+      "description": "Role-based GitHub Projects planning, execution, delivery, reporting, and repair.",
+      "version": "0.1.0"
+    }
+  ]
+}

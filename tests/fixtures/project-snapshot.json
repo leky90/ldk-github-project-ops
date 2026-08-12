@@ -1,0 +1,92 @@
+{
+  "asOf": "2026-08-12T08:00:00.000Z",
+  "project": {
+    "id": "PVT_example7",
+    "number": 7,
+    "owner": "example-org",
+    "title": "Example product",
+    "url": "https://github.com/orgs/example-org/projects/7",
+    "state": "OPEN",
+    "closed": false,
+    "lifecycle": { "mode": "continuous" },
+    "latestStatusUpdate": {
+      "id": "PVTSU_1",
+      "status": "AT_RISK",
+      "createdAt": "2026-08-11T08:00:00.000Z"
+    }
+  },
+  "items": [
+    {
+      "id": "PVTI_1",
+      "contentType": "Issue",
+      "contentState": "OPEN",
+      "repository": "example-org/product",
+      "number": 40,
+      "title": "Launch product",
+      "url": "https://github.com/example-org/product/issues/40",
+      "status": "In Progress",
+      "role": "tech-lead",
+      "priority": "high",
+      "estimate": 8,
+      "milestone": "Public launch"
+    },
+    {
+      "id": "PVTI_2",
+      "contentType": "Issue",
+      "contentState": "OPEN",
+      "repository": "example-org/product",
+      "number": 42,
+      "title": "Implement launch scope",
+      "url": "https://github.com/example-org/product/issues/42",
+      "status": "In Review",
+      "role": "qa",
+      "priority": "high",
+      "estimate": 5,
+      "milestone": "Public launch",
+      "pullRequest": {
+        "url": "https://github.com/example-org/product/pull/55",
+        "isDraft": false,
+        "requiredChecks": "passing",
+        "reviewDecision": "REVIEW_REQUIRED",
+        "headSha": "abc123",
+        "reviewedSha": "abc123"
+      }
+    },
+    {
+      "id": "PVTI_3",
+      "contentType": "Issue",
+      "contentState": "OPEN",
+      "repository": "example-org/product",
+      "number": 44,
+      "title": "Approve analytics events",
+      "url": "https://github.com/example-org/product/issues/44",
+      "status": "Blocked",
+      "role": "cpo",
+      "priority": "normal",
+      "estimate": 2,
+      "milestone": "Public launch"
+    },
+    {
+      "id": "PVTI_4",
+      "contentType": "Issue",
+      "contentState": "CLOSED",
+      "repository": "example-org/product",
+      "number": 39,
+      "title": "Approve PRD",
+      "url": "https://github.com/example-org/product/issues/39",
+      "status": "Done",
+      "role": "cpo",
+      "priority": "high",
+      "estimate": 3,
+      "milestone": "Public launch"
+    }
+  ],
+  "milestones": [
+    {
+      "repository": "example-org/product",
+      "title": "Public launch",
+      "url": "https://github.com/example-org/product/milestone/1",
+      "dueOn": "2026-09-01"
+    }
+  ]
+}

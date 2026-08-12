@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create GitHub Project Work"
+  short_description: "Plan native Projects, issues, fields, and work"
+  default_prompt: "Use $github-create-work to create role-owned work in GitHub Projects."

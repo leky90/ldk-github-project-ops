@@ -1,0 +1,29 @@
+{
+  "name": "ldk-github-project-ops",
+  "version": "0.1.0+codex.20260812111701",
+  "description": "Role-based delivery and portfolio operations for GitHub Projects, Issues, and pull requests.",
+  "author": {
+    "name": "LDKTech Solutions"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "GitHub Project RoleFlow",
+    "shortDescription": "Plan and deliver role-owned work in GitHub Projects.",
+    "longDescription": "A human-oriented workflow that turns briefs into native GitHub Project items, issues, sub-issues and dependencies; executes one role phase at a time; reviews pull-request evidence; reports lifecycle health; and repairs inconsistent project metadata without a daemon or database.",
+    "developerName": "LDKTech Solutions",
+    "category": "Productivity",
+    "capabilities": [
+      "GitHub Projects planning",
+      "Issue, sub-issue, and dependency management",
+      "Role-based execution and review handoffs",
+      "Pull-request delivery gates",
+      "Project status updates and lifecycle reporting",
+      "Safe reconciliation"
+    ],
+    "defaultPrompt": [
+      "Create role-owned work from this product brief.",
+      "Perform GitHub issue #123 as its current role.",
+      "Report this GitHub Project and its next actions."
+    ]
+  }
+}

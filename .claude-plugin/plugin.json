@@ -1,0 +1,17 @@
+{
+  "name": "ldk-github-project-ops",
+  "version": "0.1.0",
+  "description": "Role-based GitHub Projects delivery with native issues, sub-issues, dependencies, PR gates, and status updates.",
+  "author": {
+    "name": "LDKTech Solutions"
+  },
+  "license": "UNLICENSED",
+  "keywords": [
+    "github-projects",
+    "issues",
+    "pull-requests",
+    "role-workflow",
+    "handoff",
+    "reporting"
+  ]
+}

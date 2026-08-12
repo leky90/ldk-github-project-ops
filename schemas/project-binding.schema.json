@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ldktech.local/schemas/github-project-binding.schema.json",
+  "title": "GitHub Project Ops Binding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "github", "fields", "statuses"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "github": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "projectNumber", "repositories"],
+      "properties": {
+        "owner": { "$ref": "#/$defs/nonEmpty" },
+        "projectNumber": { "type": "integer", "minimum": 1 },
+        "projectId": { "$ref": "#/$defs/nonEmpty" },
+        "repositories": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" }
+        }
+      }
+    },
+    "fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "role", "priority", "deliveryPhase", "estimate"],
+      "properties": {
+        "status": { "$ref": "#/$defs/nonEmpty" },
+        "role": { "$ref": "#/$defs/nonEmpty" },
+        "priority": { "$ref": "#/$defs/nonEmpty" },
+        "deliveryPhase": { "$ref": "#/$defs/nonEmpty" },
+        "estimate": { "$ref": "#/$defs/nonEmpty" },
+        "startDate": { "$ref": "#/$defs/nonEmpty" },
+        "targetDate": { "$ref": "#/$defs/nonEmpty" },
+        "iteration": { "$ref": "#/$defs/nonEmpty" }
+      }
+    },
+    "statuses": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["refinement", "ready", "inProgress", "inReview", "readyToDeliver", "deliveryVerification", "blocked", "done", "canceled"],
+      "properties": {
+        "refinement": { "$ref": "#/$defs/nonEmpty" },
+        "ready": { "$ref": "#/$defs/nonEmpty" },
+        "inProgress": { "$ref": "#/$defs/nonEmpty" },
+        "inReview": { "$ref": "#/$defs/nonEmpty" },
+        "readyToDeliver": { "$ref": "#/$defs/nonEmpty" },
+        "deliveryVerification": { "$ref": "#/$defs/nonEmpty" },
+        "blocked": { "$ref": "#/$defs/nonEmpty" },
+        "done": { "$ref": "#/$defs/nonEmpty" },
+        "canceled": { "$ref": "#/$defs/nonEmpty" }
+      }
+    },
+    "roles": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonEmpty" }
+    }
+  },
+  "$defs": {
+    "nonEmpty": { "type": "string", "minLength": 1 }
+  }
+}
