@@ -5,6 +5,11 @@ Issues, sub-issues, dependencies, repository milestones, and pull requests. It i
 separate plugin from `ldk-linear-project-ops`; no Linear data, binding, API key,
 SQLite database, claim daemon, or scheduled worker is shared.
 
+When both repository bindings exist, explicit GitHub or Linear names, URLs, and
+native identifiers select the tracker. A generic request such as “create the issues”
+is intentionally ambiguous and must not write to either tracker until the owner
+chooses one. See `references/tracker-routing.md`.
+
 ## Public skills
 
 - `github-create-work`: turn briefs and goals into Project fields, milestones,
@@ -59,7 +64,14 @@ needed, authorize it interactively with `gh auth refresh -s project`.
 Use repository milestone, assignee, issue type, labels, sub-issues, dependencies,
 and linked pull requests for the metadata GitHub already provides natively.
 
-Recommended saved views are `Delivery board` grouped by Status, `Role queues`
-grouped by Role, `Roadmap` using start/target dates, and `Review & delivery` filtered
-to review and terminal-action states. Enable built-in synchronization deliberately;
-the plugin always re-reads item Status and Issue/PR state after a write.
+Required schema-v2 saved-view specifications are `Delivery board` grouped by Status,
+`Role queues` grouped by Role, `Roadmap` using start/target dates,
+`Review & delivery` filtered to review and terminal-action states, plus separate
+`Blocked` and `Decisions` views. Saved views update their displayed membership and
+grouping as item fields change after the view changes are saved. Enable built-in
+synchronization deliberately; the plugin always re-reads item Status and Issue/PR
+state after a write.
+
+Estimation is lightweight by default: use one relative Fibonacci point on executable
+children when it helps, never estimate parent outcomes, and allow a short omission
+reason instead of detailed effort accounting.

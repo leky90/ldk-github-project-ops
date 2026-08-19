@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ldktech.local/schemas/github-project-result.schema.json",
+  "title": "GitHub Project Apply Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "capturedAt", "project", "fields", "views", "workflows", "issues", "capabilityGaps"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner", "number", "linkedRepositories"],
+      "properties": {
+        "owner": { "type": "string", "minLength": 1 },
+        "number": { "type": "integer", "minimum": 1 },
+        "linkedRepositories": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+      }
+    },
+    "fields": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "views": { "type": "array", "items": { "$ref": "work-plan.schema.json#/$defs/view" } },
+    "workflows": { "type": "array", "items": { "type": "object" } },
+    "issues": { "type": "array", "items": { "type": "object" } },
+    "capabilityGaps": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+  }
+}

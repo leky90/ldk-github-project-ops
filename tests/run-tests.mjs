@@ -10,6 +10,7 @@ import test from "node:test";
 import { buildProjectReport } from "../scripts/build-project-report.mjs";
 import { captureGitBaseline, validateGitDelivery } from "../scripts/git-delivery-state.mjs";
 import { analyzeProjectLifecycle, resolveProjectLifecycle } from "../scripts/project-lifecycle.mjs";
+import { validateProjectResult } from "../scripts/project-result.mjs";
 import { readJson, renderHandoff, stableKey, validateHandoff, validateProjectBinding, validateProjectUpdate, validateWorkPlan } from "../scripts/lib.mjs";
 
 const exec = promisify(execFile);
@@ -37,6 +38,7 @@ test("work plan validates hierarchy, repositories, references, and dependency DA
   assert.deepEqual(validateWorkPlan(plan, { binding }), []);
   assert.match(validateWorkPlan(plan, { binding, forApply: true }).join("\n"), /mode must be apply/u);
   plan.mode = "apply";
+  plan.setup.mode = "ensure";
   assert.deepEqual(validateWorkPlan(plan, { binding, forApply: true }), []);
   plan.issues[1].blockedByKeys = ["product.analytics-decision"];
   plan.issues[2].blockedByKeys = ["product.implementation"];
@@ -44,6 +46,78 @@ test("work plan validates hierarchy, repositories, references, and dependency DA
   plan.issues[2].blockedByKeys = [];
   plan.issues[1].repository = "other-org/other-repo";
   assert.match(validateWorkPlan(plan, { binding }).join("\n"), /outside the binding/u);
+});
+
+test("schema-v2 planning requires standard dynamic views and complete sub-issue coverage", async () => {
+  const plan = await readJson(fixture("valid-work-plan.json"));
+  assert.deepEqual(validateWorkPlan(plan), []);
+  plan.views = plan.views.filter((view) => view.name !== "Decisions");
+  assert.match(validateWorkPlan(plan).join("\n"), /views must include Decisions/u);
+  plan.views.push({ name: "Decisions", layout: "table", filter: "label:kind:decision", visibleFields: ["title"] });
+  plan.issues[1].parentKey = undefined;
+  assert.match(validateWorkPlan(plan).join("\n"), /must have parentKey/u);
+  plan.issues[1].parentKey = "product.launch";
+  plan.issues = plan.issues.filter((issue) => issue.kind !== "task" && issue.kind !== "decision");
+  plan.coverage = [{ requirement: "Launch scope", issueKeys: ["product.launch"] }];
+  assert.match(validateWorkPlan(plan).join("\n"), /outcome must have at least one direct sub-issue/u);
+});
+
+test("schema-v2 coverage maps every planned issue", async () => {
+  const plan = await readJson(fixture("valid-work-plan.json"));
+  plan.coverage[1].issueKeys = [];
+  assert.match(validateWorkPlan(plan).join("\n"), /coverage must reference issue key product\.analytics-decision/u);
+});
+
+test("lightweight estimation sizes children without double-counting parent outcomes", async () => {
+  const plan = await readJson(fixture("valid-work-plan.json"));
+  assert.deepEqual(validateWorkPlan(plan), []);
+  plan.issues[0].estimate = 8;
+  assert.match(validateWorkPlan(plan).join("\n"), /omitted for an outcome/u);
+  delete plan.issues[0].estimate;
+  delete plan.issues[2].estimateReason;
+  assert.match(validateWorkPlan(plan).join("\n"), /estimateReason/u);
+  plan.issues[2].estimate = 4;
+  assert.match(validateWorkPlan(plan).join("\n"), /one of 1, 2, 3, 5, 8, 13/u);
+});
+
+test("postflight result must match setup, views, hierarchy, fields, and relations", async () => {
+  const binding = await readJson(fixture("valid-project-binding.json"));
+  const plan = await readJson(fixture("valid-work-plan.json"));
+  plan.mode = "apply";
+  plan.setup.mode = "ensure";
+  const result = {
+    schemaVersion: 1,
+    capturedAt: "2026-08-12T12:00:00Z",
+    project: { owner: plan.project.owner, number: plan.project.number, linkedRepositories: binding.github.repositories },
+    fields: plan.setup.requiredFields,
+    views: plan.views,
+    workflows: plan.setup.workflows.map(({ name, state }) => ({ name, state })),
+    issues: plan.issues.map((issue, index) => ({
+      key: issue.key,
+      url: `https://github.com/${issue.repository}/issues/${index + 1}`,
+      repository: issue.repository,
+      title: issue.title,
+      kind: issue.kind,
+      status: issue.status,
+      role: issue.role,
+      priority: issue.priority,
+      estimate: issue.estimate,
+      parentKey: issue.parentKey,
+      milestoneKey: issue.milestoneKey,
+      blockedByKeys: issue.blockedByKeys ?? [],
+      relatedKeys: issue.relatedKeys ?? [],
+    })),
+    capabilityGaps: [],
+  };
+  assert.deepEqual(validateProjectResult(plan, result, { binding }), []);
+  result.views = result.views.filter((view) => view.name !== "Delivery board");
+  assert.match(validateProjectResult(plan, result, { binding }).join("\n"), /result\.views is missing Delivery board/u);
+  result.views = plan.views;
+  result.issues[1].parentKey = undefined;
+  assert.match(validateProjectResult(plan, result, { binding }).join("\n"), /parentKey does not match plan/u);
+  result.issues[1].parentKey = plan.issues[1].parentKey;
+  result.capabilityGaps = ["saved view mutation unavailable"];
+  assert.match(validateProjectResult(plan, result, { binding }).join("\n"), /unresolved capability gaps/u);
 });
 
 test("handoff requires terminal delivery evidence before Done", async () => {
@@ -124,6 +198,27 @@ test("hook routes create, issue execution, status, and reconciliation", async ()
   assert.match(await run("Hãy thực hiện issue example-org\/product#42"), /\$github-do-issue/u);
   assert.match(await run("Hãy báo cáo Project status và health"), /\$github-project-status/u);
   assert.match(await run("Hãy reconcile resolved blocker"), /\$github-reconcile/u);
+  assert.match(await run("Hãy breakdown backlog thành sub-issues, estimate nhẹ và tạo các views chuẩn"), /\$github-create-work.*schema-v2 standard views/u);
+});
+
+test("hook arbitrates GitHub and Linear without dual-routing generic work", async () => {
+  const repo = await mkdtemp(join(tmpdir(), "github-project-router-"));
+  await writeFile(join(repo, ".github-project-ops.json"), await readFile(fixture("valid-project-binding.json")));
+  await writeFile(join(repo, ".linear-project-ops.json"), JSON.stringify({ project: { linearProjectId: "linear-project", linearTeamId: "linear-team" } }));
+  const hook = join(root, "scripts", "hook-entry.mjs");
+  const run = (prompt) => runProcess(process.execPath, [hook, "UserPromptSubmit"], JSON.stringify({ cwd: repo, prompt }));
+  assert.match(await run("Hãy tạo issues cho roadmap"), /project-ops-router.*ambiguous/su);
+  assert.doesNotMatch(await run("Hãy tạo issues cho roadmap"), /\$github-create-work/u);
+  assert.match(await run("Hãy tạo GitHub issues và sub-issues cho roadmap"), /\$github-create-work/u);
+  assert.equal(await run("Hãy tạo Linear issues cho roadmap"), "");
+  assert.match(await run("Đồng bộ Linear ABC-123 với GitHub example-org\/product#42"), /project-ops-router.*cross-tracker/su);
+});
+
+test("explicit GitHub planning request bootstraps safely without a binding", async () => {
+  const repo = await mkdtemp(join(tmpdir(), "github-project-unbound-"));
+  const hook = join(root, "scripts", "hook-entry.mjs");
+  const output = await runProcess(process.execPath, [hook, "UserPromptSubmit"], JSON.stringify({ cwd: repo, prompt: "Tạo GitHub Project issues và views chuẩn" }));
+  assert.match(output, /binding="missing".*read-only GitHub target discovery/su);
 });
 
 test("Git delivery gate requires clean scoped committed work", async () => {

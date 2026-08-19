@@ -6,12 +6,12 @@ import test from "node:test";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
-test("package exposes the same v0.1.0 plugin for Codex and Claude Code", async () => {
+test("package exposes the same v0.2.0 plugin for Codex and Claude Code", async () => {
   const codex = JSON.parse(await readFile(join(root, ".codex-plugin", "plugin.json"), "utf8"));
   const claude = JSON.parse(await readFile(join(root, ".claude-plugin", "plugin.json"), "utf8"));
   const marketplace = JSON.parse(await readFile(join(root, ".claude-plugin", "marketplace.json"), "utf8"));
   const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
-  assert.equal(packageJson.version, "0.1.0");
+  assert.equal(packageJson.version, "0.2.0");
   assert.equal(codex.name, "ldk-github-project-ops");
   assert.equal(codex.version.split("+")[0], packageJson.version);
   assert.equal(claude.version, packageJson.version);
@@ -34,15 +34,19 @@ test("source has deterministic workflow assets and no daemon or database", async
   const required = [
     "schemas/project-binding.schema.json",
     "schemas/work-plan.schema.json",
+    "schemas/project-result.schema.json",
     "schemas/handoff.schema.json",
     "schemas/project-update.schema.json",
     "scripts/project-lifecycle.mjs",
+    "scripts/project-result.mjs",
+    "scripts/validate-project-result.mjs",
     "scripts/build-project-report.mjs",
     "scripts/work-lock.mjs",
     "scripts/git-delivery-state.mjs",
     "references/github-native-model.md",
     "references/delivery-lifecycle.md",
     "references/project-setup.md",
+    "references/tracker-routing.md",
     "hooks/hooks.json",
   ];
   for (const path of required) await stat(join(root, path));

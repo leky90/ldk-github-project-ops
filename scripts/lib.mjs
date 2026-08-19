@@ -10,6 +10,18 @@ const STATUSES = new Set(["Refinement", "Ready", "In Progress", "In Review", "Re
 const DELIVERY_MODES = new Set(["artifact-review", "publish", "external-action", "software-merge", "production-release", "operations-change"]);
 const ISSUE_KINDS = new Set(["outcome", "task", "decision"]);
 const PRIORITIES = new Set(["urgent", "high", "normal", "low", "none"]);
+const ESTIMATES = new Set([1, 2, 3, 5, 8, 13]);
+const SETUP_FIELDS = new Set(["status", "role", "priority", "deliveryPhase", "estimate"]);
+const WORKFLOWS = new Set(["item-added", "closed-issue", "merged-pr", "auto-archive", "auto-add"]);
+const WORKFLOW_STATES = new Set(["enabled", "disabled", "preserve"]);
+const STANDARD_VIEWS = new Map([
+  ["Delivery board", "board"],
+  ["Role queues", null],
+  ["Roadmap", "roadmap"],
+  ["Review & delivery", null],
+  ["Blocked", null],
+  ["Decisions", null],
+]);
 const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u;
 const KEY = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/u;
 
@@ -57,9 +69,10 @@ export function validateProjectBinding(binding) {
 export function validateWorkPlan(plan, { binding, forApply = false } = {}) {
   const errors = [];
   if (!isObject(plan)) return ["plan must be an object"];
-  if (plan.schemaVersion !== 1) errors.push("schemaVersion must be 1");
+  if (![1, 2].includes(plan.schemaVersion)) errors.push("schemaVersion must be 1 or 2");
   if (!["preview", "apply"].includes(plan.mode)) errors.push("mode must be preview or apply");
   if (forApply && plan.mode !== "apply") errors.push("mode must be apply");
+  if (forApply && plan.schemaVersion !== 2) errors.push("schemaVersion 2 is required for apply");
   requiredString(plan.project?.owner, "project.owner", errors);
   if (!Number.isInteger(plan.project?.number) || plan.project.number < 1) errors.push("project.number must be a positive integer");
   if (!new Set(["bounded", "continuous"]).has(plan.project?.lifecycle?.mode)) errors.push("project.lifecycle.mode is invalid");
@@ -81,6 +94,8 @@ export function validateWorkPlan(plan, { binding, forApply = false } = {}) {
   const issueKeys = keySet(issues, "issues", errors);
   const allowedRepositories = new Set(binding?.github?.repositories ?? issues.map((issue) => issue.repository));
 
+  if (plan.schemaVersion === 2) validatePlanningContract(plan, issueKeys, errors, { forApply });
+
   resources.forEach((resource, index) => {
     requiredString(resource.title, `resources[${index}].title`, errors);
     requiredString(resource.url, `resources[${index}].url`, errors);
@@ -100,6 +115,10 @@ export function validateWorkPlan(plan, { binding, forApply = false } = {}) {
     nonEmptyStringArray(issue.dod, `${prefix}.dod`, errors);
     nonEmptyStringArray(issue.acceptanceCriteria, `${prefix}.acceptanceCriteria`, errors);
     if (issue.priority !== undefined && !PRIORITIES.has(issue.priority)) errors.push(`${prefix}.priority is invalid`);
+    if (plan.schemaVersion === 2 && issue.estimate !== undefined && !ESTIMATES.has(issue.estimate)) errors.push(`${prefix}.estimate must be one of 1, 2, 3, 5, 8, 13`);
+    if (plan.schemaVersion === 2 && issue.kind === "outcome" && issue.estimate !== undefined) errors.push(`${prefix}.estimate must be omitted for an outcome to avoid double counting`);
+    if (plan.schemaVersion === 2 && plan.estimation?.mode === "none" && issue.estimate !== undefined) errors.push(`${prefix}.estimate must be omitted when estimation.mode is none`);
+    if (plan.schemaVersion === 2 && plan.estimation?.mode === "lightweight" && issue.kind !== "outcome" && issue.estimate === undefined) requiredString(issue.estimateReason, `${prefix}.estimateReason`, errors);
     if (!isObject(issue.delivery) || !DELIVERY_MODES.has(issue.delivery?.mode)) errors.push(`${prefix}.delivery.mode is invalid`);
     requiredString(issue.delivery?.ownerRole, `${prefix}.delivery.ownerRole`, errors);
     nonEmptyStringArray(issue.delivery?.verification, `${prefix}.delivery.verification`, errors);
@@ -116,9 +135,92 @@ export function validateWorkPlan(plan, { binding, forApply = false } = {}) {
     refList(issue.relatedKeys, issueKeys, `${prefix}.relatedKeys`, errors, issue.key);
     if (issue.milestoneKey !== undefined && !milestoneKeys.has(issue.milestoneKey)) errors.push(`${prefix}.milestoneKey references an unknown milestone`);
   });
+  if (plan.schemaVersion === 2) {
+    const childrenByParent = new Map();
+    issues.forEach((issue) => {
+      if (issue.parentKey) childrenByParent.set(issue.parentKey, (childrenByParent.get(issue.parentKey) ?? 0) + 1);
+    });
+    issues.forEach((issue, index) => {
+      if (issue.kind === "outcome" && !childrenByParent.has(issue.key)) errors.push(`issues[${index}] outcome must have at least one direct sub-issue`);
+    });
+  }
   detectDependencyCycles(issues, errors);
   if (containsSecret(plan)) errors.push("plan contains credential-like data");
   return errors;
+}
+
+function validatePlanningContract(plan, issueKeys, errors, { forApply }) {
+  if (!isObject(plan.setup)) errors.push("setup must be an object for schemaVersion 2");
+  else {
+    if (!["audit", "ensure", "preserve"].includes(plan.setup.mode)) errors.push("setup.mode is invalid");
+    if (forApply && plan.setup.mode !== "ensure") errors.push("setup.mode must be ensure for apply");
+    if (!Array.isArray(plan.setup.requiredFields)) errors.push("setup.requiredFields must be an array");
+    else {
+      unique(plan.setup.requiredFields, "setup.requiredFields", errors);
+      for (const field of SETUP_FIELDS) if (!plan.setup.requiredFields.includes(field)) errors.push(`setup.requiredFields must include ${field}`);
+      plan.setup.requiredFields.forEach((field, index) => {
+        if (!SETUP_FIELDS.has(field) && !["startDate", "targetDate", "iteration"].includes(field)) errors.push(`setup.requiredFields[${index}] is invalid`);
+      });
+    }
+    if (!Array.isArray(plan.setup.workflows)) errors.push("setup.workflows must be an array");
+    else {
+      const names = new Set();
+      plan.setup.workflows.forEach((workflow, index) => {
+        const prefix = `setup.workflows[${index}]`;
+        if (!isObject(workflow) || !WORKFLOWS.has(workflow.name)) errors.push(`${prefix}.name is invalid`);
+        else if (names.has(workflow.name)) errors.push(`${prefix}.name is duplicated`);
+        else names.add(workflow.name);
+        if (!WORKFLOW_STATES.has(workflow.state)) errors.push(`${prefix}.state is invalid`);
+        if (workflow.state !== "preserve") requiredString(workflow.reason, `${prefix}.reason`, errors);
+      });
+    }
+  }
+
+  if (!isObject(plan.estimation) || !["none", "lightweight"].includes(plan.estimation.mode)) errors.push("estimation.mode must be none or lightweight for schemaVersion 2");
+  else if (plan.estimation.mode === "lightweight" && plan.estimation.scale !== "fibonacci") errors.push("estimation.scale must be fibonacci for lightweight estimation");
+
+  if (!Array.isArray(plan.views)) errors.push("views must be an array for schemaVersion 2");
+  else {
+    const views = new Map();
+    plan.views.forEach((view, index) => {
+      const prefix = `views[${index}]`;
+      requiredString(view?.name, `${prefix}.name`, errors);
+      if (!new Set(["table", "board", "roadmap"]).has(view?.layout)) errors.push(`${prefix}.layout is invalid`);
+      if (typeof view?.name === "string" && views.has(view.name)) errors.push(`${prefix}.name is duplicated`);
+      else if (typeof view?.name === "string") views.set(view.name, view);
+      if (view?.groupBy !== undefined) requiredString(view.groupBy, `${prefix}.groupBy`, errors);
+      if (view?.filter !== undefined) requiredString(view.filter, `${prefix}.filter`, errors);
+      if (!Array.isArray(view?.visibleFields) || !view.visibleFields.length) errors.push(`${prefix}.visibleFields must be a non-empty array`);
+      else unique(view.visibleFields, `${prefix}.visibleFields`, errors);
+    });
+    for (const [name, layout] of STANDARD_VIEWS) {
+      if (!views.has(name)) errors.push(`views must include ${name}`);
+      else if (layout && views.get(name).layout !== layout) errors.push(`${name} must use ${layout} layout`);
+    }
+    if (views.get("Delivery board")?.groupBy !== "status") errors.push("Delivery board must groupBy status");
+    if (views.get("Role queues")?.groupBy !== "role") errors.push("Role queues must groupBy role");
+    for (const name of ["Review & delivery", "Blocked", "Decisions"]) if (!views.get(name)?.filter) errors.push(`${name} must define a filter`);
+  }
+
+  if (!Array.isArray(plan.coverage) || !plan.coverage.length) errors.push("coverage must be a non-empty array for schemaVersion 2");
+  else {
+    const coveredKeys = new Set();
+    plan.coverage.forEach((entry, index) => {
+      const prefix = `coverage[${index}]`;
+      requiredString(entry?.requirement, `${prefix}.requirement`, errors);
+      if (!Array.isArray(entry?.issueKeys) || !entry.issueKeys.length) errors.push(`${prefix}.issueKeys must be a non-empty array`);
+      else {
+        unique(entry.issueKeys, `${prefix}.issueKeys`, errors);
+        entry.issueKeys.forEach((key) => {
+          coveredKeys.add(key);
+          if (!issueKeys.has(key)) errors.push(`${prefix}.issueKeys references unknown key ${key}`);
+        });
+      }
+    });
+    issueKeys.forEach((key) => {
+      if (!coveredKeys.has(key)) errors.push(`coverage must reference issue key ${key}`);
+    });
+  }
 }
 
 export function validateHandoff(handoff) {

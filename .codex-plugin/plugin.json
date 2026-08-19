@@ -1,6 +1,6 @@
 {
   "name": "ldk-github-project-ops",
-  "version": "0.1.0+codex.20260812111701",
+  "version": "0.2.0+codex.20260812165441",
   "description": "Role-based delivery and portfolio operations for GitHub Projects, Issues, and pull requests.",
   "author": {
     "name": "LDKTech Solutions"
