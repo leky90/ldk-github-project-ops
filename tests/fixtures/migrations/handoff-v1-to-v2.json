@@ -1,0 +1,64 @@
+{
+  "artifact": {
+    "schemaVersion": 2,
+    "kind": "github-role-handoff",
+    "type": "review",
+    "issueId": "example-org/product#42",
+    "fromRole": "qa",
+    "toRole": "software-engineer",
+    "summary": "Implementation satisfies the reviewed acceptance criteria.",
+    "transition": {
+      "from": "in-review",
+      "to": "ready-to-deliver"
+    },
+    "deliverables": [
+      "Reviewed implementation"
+    ],
+    "checks": [
+      {
+        "item": "Acceptance scenarios pass",
+        "passed": true
+      }
+    ],
+    "evidence": [
+      {
+        "kind": "url",
+        "label": "Reviewed pull request",
+        "value": "https://github.com/example-org/product/pull/55",
+        "visibility": "shared"
+      }
+    ],
+    "delivery": {
+      "mode": "software-merge",
+      "ownerRole": "qa",
+      "phase": "ready-to-deliver",
+      "checks": []
+    },
+    "review": {
+      "decision": "passed",
+      "findings": []
+    },
+    "nextAction": "Merge the reviewed pull request."
+  },
+  "diagnostics": {
+    "warnings": [],
+    "decisions": [
+      {
+        "code": "missing-observed-state",
+        "path": "observedState",
+        "message": "Capture live issue timestamps and logical state before mutation."
+      },
+      {
+        "code": "missing-delivery-checks",
+        "path": "delivery.checks",
+        "message": "Define typed terminal delivery checks."
+      },
+      {
+        "code": "missing-review-independence",
+        "path": "review.independence",
+        "message": "Record fresh-session, fresh-subagent, or external-reviewer for the passed review."
+      }
+    ]
+  },
+  "eligibleForApply": false
+}

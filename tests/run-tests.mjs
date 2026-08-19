@@ -8,10 +8,11 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import { buildProjectReport } from "../scripts/build-project-report.mjs";
-import { captureGitBaseline, validateGitDelivery } from "../scripts/git-delivery-state.mjs";
+import { captureGitBaseline, validateGitBaseline } from "../scripts/git-delivery-state.mjs";
 import { analyzeProjectLifecycle, resolveProjectLifecycle } from "../scripts/project-lifecycle.mjs";
 import { validateProjectResult } from "../scripts/project-result.mjs";
-import { readJson, renderHandoff, stableKey, validateHandoff, validateProjectBinding, validateProjectUpdate, validateWorkPlan } from "../scripts/lib.mjs";
+import { readJson, stableKey, validateHandoff, validateProjectBinding, validateProjectUpdate, validateWorkPlan } from "../scripts/lib.mjs";
+import { renderLegacyHandoff } from "../scripts/legacy-lib.mjs";
 
 const exec = promisify(execFile);
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -29,17 +30,16 @@ test("binding validates exact Project and repository boundary", async () => {
   assert.match(validateProjectBinding(binding).join("\n"), /repositories\[1\] is invalid/u);
   binding.github.repositories[1] = "example-org/other";
   binding.token = ["github", "pat", "abcdefghijklmnopqrstuvwxyz123456"].join("_");
-  assert.match(validateProjectBinding(binding).join("\n"), /credential-like/u);
+  assert.match(validateProjectBinding(binding).join("\n"), /secret-like/u);
 });
 
 test("work plan validates hierarchy, repositories, references, and dependency DAG", async () => {
   const binding = await readJson(fixture("valid-project-binding.json"));
   const plan = await readJson(fixture("valid-work-plan.json"));
   assert.deepEqual(validateWorkPlan(plan, { binding }), []);
-  assert.match(validateWorkPlan(plan, { binding, forApply: true }).join("\n"), /mode must be apply/u);
+  assert.match(validateWorkPlan(plan, { binding, forApply: true }).join("\n"), /migration.*v4.*required/u);
   plan.mode = "apply";
   plan.setup.mode = "ensure";
-  assert.deepEqual(validateWorkPlan(plan, { binding, forApply: true }), []);
   plan.issues[1].blockedByKeys = ["product.analytics-decision"];
   plan.issues[2].blockedByKeys = ["product.implementation"];
   assert.match(validateWorkPlan(plan, { binding }).join("\n"), /dependency cycle/u);
@@ -123,7 +123,7 @@ test("postflight result must match setup, views, hierarchy, fields, and relation
 test("handoff requires terminal delivery evidence before Done", async () => {
   const handoff = await readJson(fixture("valid-handoff.json"));
   assert.deepEqual(validateHandoff(handoff), []);
-  assert.match(renderHandoff(handoff), /Handoff · software-engineer → qa/u);
+  assert.match(renderLegacyHandoff(handoff), /Handoff · software-engineer → qa/u);
   handoff.next.status = "Done";
   assert.match(validateHandoff(handoff).join("\n"), /terminal delivery\.phase/u);
   handoff.delivery.phase = "terminal";
@@ -181,11 +181,11 @@ test("Issue state and Project item Status mismatches are explicit", async () => 
 
 test("project report shows queues, milestones, PR delivery, and lifecycle", async () => {
   const report = buildProjectReport(await readJson(fixture("project-snapshot.json")));
-  assert.match(report, /1\/4 items Done \(25%\)/u);
-  assert.match(report, /3\/18 estimated effort Done \(17%\)/u);
+  assert.match(report, /0\/4 items Done \(0%\)/u);
+  assert.match(report, /Terminal mismatch/u);
   assert.match(report, /Project state: \*\*open\*\*; latest native status update: \*\*AT_RISK\*\*/u);
-  assert.match(report, /Public launch.*1\/4 Done/u);
-  assert.match(report, /qa:\*\* 0 Ready, 0 active, 1 review/u);
+  assert.match(report, /Public launch.*0\/4 Done/u);
+  assert.match(report, /qa:\*\* 0 Ready, 0 active, 1 review, 0 ready to deliver/u);
   assert.doesNotMatch(report, /\bclaim token\b|\bheartbeat\b|\.github-ops/iu);
 });
 
@@ -198,7 +198,7 @@ test("hook routes create, issue execution, status, and reconciliation", async ()
   assert.match(await run("Hãy thực hiện issue example-org\/product#42"), /\$github-do-issue/u);
   assert.match(await run("Hãy báo cáo Project status và health"), /\$github-project-status/u);
   assert.match(await run("Hãy reconcile resolved blocker"), /\$github-reconcile/u);
-  assert.match(await run("Hãy breakdown backlog thành sub-issues, estimate nhẹ và tạo các views chuẩn"), /\$github-create-work.*schema-v2 standard views/u);
+  assert.match(await run("Hãy breakdown backlog thành sub-issues, estimate nhẹ và tạo các views chuẩn"), /\$github-create-work.*standard saved views/u);
 });
 
 test("hook arbitrates GitHub and Linear without dual-routing generic work", async () => {
@@ -221,7 +221,7 @@ test("explicit GitHub planning request bootstraps safely without a binding", asy
   assert.match(output, /binding="missing".*read-only GitHub target discovery/su);
 });
 
-test("Git delivery gate requires clean scoped committed work", async () => {
+test("Git baseline capture requires worktree isolation and validates its record", async () => {
   const repo = await mkdtemp(join(tmpdir(), "github-delivery-"));
   await exec("git", ["init", "-q", repo]);
   await exec("git", ["-C", repo, "config", "user.email", "test@example.com"]);
@@ -229,15 +229,14 @@ test("Git delivery gate requires clean scoped committed work", async () => {
   await writeFile(join(repo, "README.md"), "base\n");
   await exec("git", ["-C", repo, "add", "README.md"]);
   await exec("git", ["-C", repo, "commit", "-qm", "base"]);
-  await exec("git", ["-C", repo, "switch", "-qc", "issue-42-launch"]);
-  const baseline = await captureGitBaseline(repo, "example-org/product#42");
-  await writeFile(join(repo, "feature.js"), "export const ready = true;\n");
-  await exec("git", ["-C", repo, "add", "feature.js"]);
-  await exec("git", ["-C", repo, "commit", "-qm", "implement #42"]);
-  assert.deepEqual(await validateGitDelivery(baseline, ["feature.js"]), []);
-  assert.match((await validateGitDelivery(baseline, ["src"])).join("\n"), /outside declared scope/u);
-  await writeFile(join(repo, "dirty.txt"), "dirty\n");
-  assert.match((await validateGitDelivery(baseline, ["feature.js"])).join("\n"), /must be clean/u);
+
+  await assert.rejects(captureGitBaseline({ repository: repo, issueId: "example-org/product#42" }), /worktree/u);
+
+  const linked = join(repo, ".worktrees", "issue-42");
+  await exec("git", ["-C", repo, "worktree", "add", "-q", linked, "-b", "issue-42-launch"]);
+  const baseline = await captureGitBaseline({ repository: linked, issueId: "example-org/product#42" });
+  assert.deepEqual(validateGitBaseline(baseline), []);
+  assert.equal(baseline.issueId, "example-org/product#42");
 });
 
 function runProcess(command, args, input) {

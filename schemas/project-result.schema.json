@@ -4,24 +4,133 @@
   "title": "GitHub Project Apply Result",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "capturedAt", "project", "fields", "views", "workflows", "issues", "capabilityGaps"],
+  "required": [
+    "schemaVersion",
+    "capturedAt",
+    "project",
+    "fields",
+    "views",
+    "workflows",
+    "issues",
+    "capabilityGaps"
+  ],
   "properties": {
-    "schemaVersion": { "const": 1 },
-    "capturedAt": { "type": "string", "format": "date-time" },
+    "schemaVersion": {
+      "const": 1
+    },
+    "capturedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
     "project": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["owner", "number", "linkedRepositories"],
+      "required": [
+        "owner",
+        "number",
+        "linkedRepositories"
+      ],
       "properties": {
-        "owner": { "type": "string", "minLength": 1 },
-        "number": { "type": "integer", "minimum": 1 },
-        "linkedRepositories": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "linkedRepositories": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
-    "fields": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
-    "views": { "type": "array", "items": { "$ref": "work-plan.schema.json#/$defs/view" } },
-    "workflows": { "type": "array", "items": { "type": "object" } },
-    "issues": { "type": "array", "items": { "type": "object" } },
-    "capabilityGaps": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+    "fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "views": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/view"
+      }
+    },
+    "workflows": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "capabilityGaps": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "view": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "layout",
+        "visibleFields"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "layout": {
+          "enum": [
+            "table",
+            "board",
+            "roadmap"
+          ]
+        },
+        "groupBy": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "filter": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "sortBy": {
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "visibleFields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmpty"
+          }
+        }
+      }
+    },
+    "nonEmpty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    }
   }
 }

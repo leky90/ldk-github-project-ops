@@ -1,0 +1,246 @@
+{
+  "schemaVersion": 2,
+  "mode": "preview",
+  "project": {
+    "owner": "example-org",
+    "number": 7,
+    "title": "Example product",
+    "lifecycle": {
+      "mode": "continuous",
+      "completionCriteria": [
+        "CPO confirms the declared product end-state"
+      ]
+    }
+  },
+  "setup": {
+    "mode": "audit",
+    "requiredFields": [
+      "status",
+      "role",
+      "priority",
+      "deliveryPhase",
+      "estimate",
+      "startDate",
+      "targetDate"
+    ],
+    "workflows": [
+      {
+        "name": "item-added",
+        "state": "preserve"
+      },
+      {
+        "name": "closed-issue",
+        "state": "enabled",
+        "reason": "Keep closed Issue state aligned with the Project item after delivery verification."
+      },
+      {
+        "name": "merged-pr",
+        "state": "enabled",
+        "reason": "Reflect merged pull requests while retaining the delivery verification gate."
+      },
+      {
+        "name": "auto-archive",
+        "state": "disabled",
+        "reason": "Keep completed items visible for reporting."
+      }
+    ]
+  },
+  "estimation": {
+    "mode": "lightweight",
+    "scale": "fibonacci"
+  },
+  "views": [
+    {
+      "name": "Delivery board",
+      "layout": "board",
+      "groupBy": "status",
+      "visibleFields": [
+        "title",
+        "role",
+        "priority",
+        "estimate"
+      ]
+    },
+    {
+      "name": "Role queues",
+      "layout": "table",
+      "groupBy": "role",
+      "visibleFields": [
+        "title",
+        "status",
+        "priority",
+        "estimate"
+      ]
+    },
+    {
+      "name": "Roadmap",
+      "layout": "roadmap",
+      "visibleFields": [
+        "title",
+        "startDate",
+        "targetDate",
+        "milestone"
+      ]
+    },
+    {
+      "name": "Review & delivery",
+      "layout": "table",
+      "filter": "status:In Review,Ready to Deliver,Delivery Verification",
+      "visibleFields": [
+        "title",
+        "status",
+        "role",
+        "deliveryPhase"
+      ]
+    },
+    {
+      "name": "Blocked",
+      "layout": "table",
+      "filter": "status:Blocked",
+      "visibleFields": [
+        "title",
+        "status",
+        "role",
+        "priority"
+      ]
+    },
+    {
+      "name": "Decisions",
+      "layout": "table",
+      "filter": "label:kind:decision",
+      "visibleFields": [
+        "title",
+        "status",
+        "role",
+        "priority"
+      ]
+    }
+  ],
+  "coverage": [
+    {
+      "requirement": "Launch scope is implemented and reviewable.",
+      "issueKeys": [
+        "product.launch",
+        "product.implementation"
+      ]
+    },
+    {
+      "requirement": "Analytics naming has an explicit owner decision.",
+      "issueKeys": [
+        "product.analytics-decision"
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "key": "product.prd",
+      "title": "Product PRD",
+      "kind": "prd",
+      "url": "https://github.com/example-org/product/blob/main/docs/prd.md"
+    }
+  ],
+  "milestones": [
+    {
+      "key": "launch",
+      "repository": "example-org/product",
+      "title": "Public launch",
+      "dueDate": "2026-09-01"
+    }
+  ],
+  "issues": [
+    {
+      "key": "product.launch",
+      "repository": "example-org/product",
+      "title": "Launch the product",
+      "kind": "outcome",
+      "status": "Ready",
+      "role": "tech-lead",
+      "reviewerRole": "cpo",
+      "priority": "high",
+      "milestoneKey": "launch",
+      "dor": [
+        "PRD approved"
+      ],
+      "dod": [
+        "Implementation tasks are independently owned"
+      ],
+      "acceptanceCriteria": [
+        "Launch scope is traceable to the PRD"
+      ],
+      "delivery": {
+        "mode": "artifact-review",
+        "ownerRole": "cpo",
+        "verification": [
+          "CPO accepts the technical breakdown"
+        ]
+      },
+      "resourceKeys": [
+        "product.prd"
+      ]
+    },
+    {
+      "key": "product.implementation",
+      "repository": "example-org/product",
+      "title": "Implement launch scope",
+      "kind": "task",
+      "parentKey": "product.launch",
+      "status": "Ready",
+      "role": "software-engineer",
+      "reviewerRole": "qa",
+      "priority": "high",
+      "estimate": 5,
+      "milestoneKey": "launch",
+      "dor": [
+        "Technical breakdown approved"
+      ],
+      "dod": [
+        "Pull request and tests are ready for QA"
+      ],
+      "acceptanceCriteria": [
+        "Required user journey passes"
+      ],
+      "delivery": {
+        "mode": "software-merge",
+        "ownerRole": "tech-lead",
+        "target": "main",
+        "verification": [
+          "PR merged to main",
+          "Post-merge checks pass"
+        ]
+      },
+      "resourceKeys": [
+        "product.prd"
+      ]
+    },
+    {
+      "key": "product.analytics-decision",
+      "repository": "example-org/product",
+      "title": "Approve analytics event names",
+      "kind": "decision",
+      "parentKey": "product.launch",
+      "status": "Refinement",
+      "role": "cpo",
+      "estimateReason": "Decision scope is bounded by authority rather than implementation effort.",
+      "dor": [
+        "Candidate event names documented"
+      ],
+      "dod": [
+        "One event contract is approved"
+      ],
+      "acceptanceCriteria": [
+        "Names cover the launch funnel"
+      ],
+      "delivery": {
+        "mode": "artifact-review",
+        "ownerRole": "cpo",
+        "verification": [
+          "Decision is recorded in the PRD"
+        ]
+      },
+      "relatedKeys": [
+        "product.implementation"
+      ],
+      "priority": "normal"
+    }
+  ]
+}

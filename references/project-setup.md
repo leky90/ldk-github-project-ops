@@ -18,8 +18,10 @@ report.
    them. The current `gh project field-create` command supports text, number, date,
    and single-select; use the Project UI or an explicitly supported API path for an
    iteration field.
-5. Query `gh project field-list ... --format json` and persist names in the binding,
-   not field or option IDs. Resolve IDs live before mutation.
+5. Query `gh project field-list ... --format json` and persist canonical display
+   names in the binding, never field or option IDs. Resolve live IDs
+   immediately before each write and fail closed when a bound name no longer
+   exists in the field.
 
 Do not silently replace an existing team's Status semantics. If the required options
 are missing, produce an exact setup preview and stop workflow-state writes until the
@@ -46,7 +48,7 @@ reflected automatically. Unsaved personal view changes are not shared. A view do
 not itself update item metadata, except deliberate interactions such as dragging an
 item between board columns.
 
-Validate all six view definitions in every schema-v2 plan. If the available GitHub
+Validate all six view definitions operationally before reporting setup complete. If the available GitHub
 connector, CLI, or API cannot create or edit a saved view, preserve the exact view
 specification and report the UI capability gap; do not claim the view exists.
 
@@ -58,6 +60,6 @@ to Done. Treat that automation as a convenience: delivery verification may still
 require correcting a premature Done field. Auto-archive retains field values but
 removes items from Insights, so archive only after reporting and audit needs are met.
 
-Record each workflow as `enabled`, `disabled`, or `preserve` in a schema-v2 plan.
+Record each workflow decision as `enabled`, `disabled`, or `preserve` in the setup audit.
 Changing a workflow is setup mutation and requires the same direct authority as
 changing fields.

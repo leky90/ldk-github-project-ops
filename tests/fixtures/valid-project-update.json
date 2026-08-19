@@ -1,13 +1,23 @@
 {
   "schemaVersion": 1,
+  "kind": "github-project-update",
   "mode": "preview",
   "projectId": "PVT_example7",
-  "status": "AT_RISK",
-  "summary": "Launch validation is waiting on analytics approval.",
-  "progress": ["Implementation PR is ready for QA"],
-  "risks": ["Analytics decision is not approved"],
-  "evidence": [
-    { "label": "Decision issue", "url": "https://github.com/example-org/product/issues/44" }
+  "health": "AT_RISK",
+  "summary": "Delivery is at risk while the launch review completes.",
+  "progress": [
+    "Launch scope implementation is In Review."
   ],
-  "nextActions": ["CPO approves the analytics event contract"]
+  "risks": [
+    "Review capacity is limited this week."
+  ],
+  "nextSteps": [
+    "Reviewer completes the launch scope review."
+  ],
+  "evidence": [
+    {
+      "label": "Review queue",
+      "value": "https://github.com/orgs/example-org/projects/7"
+    }
+  ]
 }

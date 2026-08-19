@@ -1,7 +1,9 @@
 import { validateProjectBinding, validateWorkPlan } from "./lib.mjs";
 
 export function validateProjectResult(plan, result, { binding } = {}) {
-  const errors = [...validateWorkPlan(plan, { binding, forApply: true })];
+  const errors = plan?.schemaVersion === 4
+    ? [...validateWorkPlan(plan, { owner: binding?.github?.owner, projectNumber: binding?.github?.projectNumber, repositories: binding?.github?.repositories, forApply: true })]
+    : [...validateWorkPlan(plan, { binding })];
   if (!result || typeof result !== "object" || Array.isArray(result)) return [...errors, "result must be an object"];
   if (result.schemaVersion !== 1) errors.push("result.schemaVersion must be 1");
   if (result.capturedAt === undefined || Number.isNaN(Date.parse(result.capturedAt))) errors.push("result.capturedAt must be an ISO timestamp");

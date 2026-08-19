@@ -1,4 +1,4 @@
-const ACTIVE_ITEM_STATUSES = new Set(["in progress", "in review", "ready to deliver", "delivery verification"]);
+const ACTIVE_ITEM_STATUSES = new Set(["in progress", "in-progress", "in review", "in-review", "ready to deliver", "ready-to-deliver", "delivery verification", "delivery-verification"]);
 const STARTED_ITEM_STATUSES = new Set([...ACTIVE_ITEM_STATUSES, "done"]);
 const TERMINAL_ITEM_STATUSES = new Set(["done", "canceled", "cancelled"]);
 const HEALTH = new Set(["ON_TRACK", "AT_RISK", "OFF_TRACK", "INACTIVE", "COMPLETE"]);
@@ -16,14 +16,28 @@ export function resolveProjectLifecycle(snapshot) {
   };
 }
 
+function effectiveState(item) {
+  // Prefer the normalized logical state when the snapshot carries it. A Done
+  // item without validated terminal evidence stays open work UNLESS the
+  // underlying content is genuinely terminal on GitHub (closed issue or merged
+  // PR) — real closure is durable evidence at lifecycle level even when the
+  // mode-specific verification record is missing.
+  const state = item.logicalState ?? normalize(item.status);
+  if (state === "done" && item.terminalVerified !== true && !isContentTerminal(item)) return "in-review";
+  return state;
+}
+
 export function analyzeProjectLifecycle(snapshot) {
   if (!snapshot?.project) throw new Error("snapshot.project is required");
   const lifecycle = resolveProjectLifecycle(snapshot);
   const items = (Array.isArray(snapshot.items) ? snapshot.items : [])
-    .filter((item) => normalize(item.status) !== "canceled" && normalize(item.status) !== "cancelled");
-  const openItems = items.filter((item) => !isTerminalItem(item));
-  const activeItems = items.filter((item) => ACTIVE_ITEM_STATUSES.has(normalize(item.status)));
-  const startedItems = items.filter((item) => STARTED_ITEM_STATUSES.has(normalize(item.status)) || isContentTerminal(item));
+    // keep the physical status for content-state mismatch detection; classify
+    // open/active work on the effective (logical, evidence-demoted) state
+    .map((item) => ({ ...item, effectiveStatus: effectiveState(item) }))
+    .filter((item) => normalize(item.effectiveStatus) !== "canceled" && normalize(item.effectiveStatus) !== "cancelled" && normalize(item.status) !== "canceled" && normalize(item.status) !== "cancelled");
+  const openItems = items.filter((item) => !TERMINAL_ITEM_STATUSES.has(normalize(item.effectiveStatus)) && !isContentTerminal(item));
+  const activeItems = items.filter((item) => ACTIVE_ITEM_STATUSES.has(normalize(item.effectiveStatus)));
+  const startedItems = items.filter((item) => STARTED_ITEM_STATUSES.has(normalize(item.effectiveStatus)) || isContentTerminal(item));
   const closedContentNonterminal = items.filter((item) => isContentTerminal(item) && !TERMINAL_ITEM_STATUSES.has(normalize(item.status)));
   const openContentTerminalStatus = items.filter((item) => !isContentTerminal(item) && TERMINAL_ITEM_STATUSES.has(normalize(item.status)) && hasOpenContentState(item));
   const evidence = [];
@@ -45,6 +59,11 @@ export function analyzeProjectLifecycle(snapshot) {
     return { code: "inactive-with-active-work", consistency: "mismatch", ...base, message: `Project đang INACTIVE nhưng có ${activeItems.length} item đang thực thi hoặc delivery.`, requiresDecision: true, recommendedAction: "Decide whether to resume the Project or stop the active work." };
   }
   if (lifecycle.state === "open" && openItems.length === 0) {
+    // A published COMPLETE update already answers the completion decision, so
+    // it must be recognized before re-demanding one.
+    if (lifecycle.health === "COMPLETE") {
+      return { code: "complete-update-project-open", consistency: "advisory", ...base, message: "Latest update là COMPLETE nhưng Project vẫn open.", requiresDecision: true, recommendedAction: "Confirm whether the Project should remain open for another outcome or be explicitly closed." };
+    }
     if (lifecycle.lifecycleMode === "continuous") {
       return { code: "continuous-needs-outcome", consistency: "advisory", ...base, message: "Continuous Project đang không có outcome mở; giữ Project open và yêu cầu outcome tiếp theo.", requiresDecision: true, recommendedAction: "CPO defines the next outcome or milestone; do not auto-close or publish COMPLETE." };
     }

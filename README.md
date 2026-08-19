@@ -56,7 +56,7 @@ needed, authorize it interactively with `gh auth refresh -s project`.
   Delivery Verification, Blocked, Done, Canceled.
 - `Role`: project-specific role options.
 - `Priority`: Urgent, High, Normal, Low, None.
-- `Delivery phase`: Artifact Review, Ready to Deliver, Delivery Verification.
+- `Delivery phase`: Review, Ready to Deliver, Delivery Verification, Complete.
 - `Estimate`: number.
 - `Start date`, `Target date`: dates.
 - `Iteration`: native iteration field when time-boxing is useful.
@@ -64,7 +64,7 @@ needed, authorize it interactively with `gh auth refresh -s project`.
 Use repository milestone, assignee, issue type, labels, sub-issues, dependencies,
 and linked pull requests for the metadata GitHub already provides natively.
 
-Required schema-v2 saved-view specifications are `Delivery board` grouped by Status,
+Standard saved-view specifications (operational setup, not part of the v4 plan) are `Delivery board` grouped by Status,
 `Role queues` grouped by Role, `Roadmap` using start/target dates,
 `Review & delivery` filtered to review and terminal-action states, plus separate
 `Blocked` and `Decisions` views. Saved views update their displayed membership and

@@ -1,19 +1,58 @@
 {
   "hooks": {
     "SessionStart": [
-      { "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-entry.mjs\" SessionStart", "statusMessage": "github project ops: loading project boundary" }] }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-entry.mjs\" SessionStart",
+            "statusMessage": "github project ops: loading project boundary"
+          }
+        ]
+      }
     ],
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-entry.mjs\" UserPromptSubmit", "statusMessage": "github project ops: routing project work" }] }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-entry.mjs\" UserPromptSubmit",
+            "statusMessage": "github project ops: routing project work"
+          }
+        ]
+      }
     ],
     "PreToolUse": [
-      { "matcher": "mcp__github__.*|github.*|gh.*|create_issue|update_issue|create_pull_request|add_issue_comment", "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-entry.mjs\" PreToolUse" }] }
+      {
+        "matcher": ".*github.*|mcp__.*__(create|update|add|remove|delete|merge|push|close|reopen|fork|submit|request|reprioritize|transfer|archive|set|edit|assign|dispatch|run|rerun|cancel|dismiss|mark|manage)_.*|create_issue|update_issue|create_pull_request|add_issue_comment",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-entry.mjs\" PreToolUse"
+          }
+        ]
+      }
     ],
     "PostToolUse": [
-      { "matcher": "mcp__github__.*|github.*|gh.*|create_issue|update_issue|create_pull_request|add_issue_comment", "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-entry.mjs\" PostToolUse" }] }
+      {
+        "matcher": ".*github.*|mcp__.*__(create|update|add|remove|delete|merge|push|close|reopen|fork|submit|request|reprioritize|transfer|archive|set|edit|assign|dispatch|run|rerun|cancel|dismiss|mark|manage)_.*|create_issue|update_issue|create_pull_request|add_issue_comment",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-entry.mjs\" PostToolUse"
+          }
+        ]
+      }
     ],
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-entry.mjs\" Stop" }] }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/hook-entry.mjs\" Stop"
+          }
+        ]
+      }
     ]
   }
 }
