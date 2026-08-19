@@ -630,8 +630,8 @@ export function validateHandoff(handoff, { roles = DEFAULT_ROLES } = {}) {
 function validateHandoffV2(handoff, { roles }) {
   const errors = [];
   const eventTypes = new Set(["handoff", "review", "delivery", "verification", "blocked", "reconciliation"]);
-  const evidenceKinds = new Set(["url", "linear-resource", "commit", "text", "local-note", "local-file", "validator", "report"]);
-  const sharedEvidenceKinds = new Set(["url", "linear-resource", "commit", "text"]);
+  const evidenceKinds = new Set(["url", "github-resource", "commit", "text", "local-note", "local-file", "validator", "report"]);
+  const sharedEvidenceKinds = new Set(["url", "github-resource", "commit", "text"]);
 
   rejectUnknownProperties(handoff, new Set([
     "schemaVersion", "kind", "type", "issueId", "fromRole", "toRole", "summary", "observedAt",
@@ -867,7 +867,7 @@ export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
   };
   const localOnlyEvidence = containsLocalEvidence;
   const visibleEvidence = (handoff.evidence ?? []).filter((item) => {
-    if (handoff.schemaVersion === 2 && (item.visibility !== "shared" || !new Set(["url", "linear-resource", "commit", "text"]).has(item.kind))) return false;
+    if (handoff.schemaVersion === 2 && (item.visibility !== "shared" || !new Set(["url", "github-resource", "commit", "text"]).has(item.kind))) return false;
     return !localOnlyEvidence(item.value);
   });
   const hiddenLocalEvidenceCount = (handoff.evidence ?? []).length - visibleEvidence.length;
