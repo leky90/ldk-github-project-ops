@@ -81,8 +81,8 @@ issue or adopt the next role unless the user explicitly expands the request.
    - delivery ready for review → `In Review` plus reviewer role;
    - artifact or decision review passed with recorded review independence
      (`fresh-session`, `fresh-subagent`, or `external-reviewer`) and passing
-     terminal checks → `Done`, then close the Issue as completed when
-     configured;
+     terminal checks → `Done`, then close the Issue as completed when the
+     workspace convention closes finished issues;
    - action-mode review passed → `Ready to Deliver` plus terminal owner;
    - terminal action completed → `Delivery Verification`;
    - verification passed → `Done` and close completed;
