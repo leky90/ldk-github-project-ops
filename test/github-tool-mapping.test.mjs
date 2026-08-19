@@ -57,3 +57,23 @@ test("logical states resolve to bound Projects v2 status option ids", async () =
   assert.equal(mapStatusOption(binding, "delivery-verification"), binding.statuses.deliveryVerification);
   assert.throws(() => mapStatusOption(binding, "unknown-state"), /logical state/u);
 });
+
+test("pending-review, workflow, and notification mutations classify correctly", () => {
+  for (const name of [
+    "mcp__b51fc322-0044-4834-8ab1-c42c4aa5dab6__create_pending_pull_request_review",
+    "mcp__b51fc322-0044-4834-8ab1-c42c4aa5dab6__submit_pending_pull_request_review",
+    "mcp__b51fc322-0044-4834-8ab1-c42c4aa5dab6__update_pull_request_branch",
+    "mcp__github__run_workflow",
+    "mcp__github__dismiss_notification",
+    "mcp__github__mark_all_notifications_read",
+    "mcp__github__manage_notification_subscription",
+  ]) assert.equal(classifyGitHubOperation(name), "mutation", name);
+});
+
+test("binding statuses invert into a snapshot state map", async () => {
+  const { statesFromBinding } = await import("../scripts/github-tool-mapping.mjs");
+  const binding = JSON.parse(await readFile(join(root, "tests", "fixtures", "valid-project-binding.json"), "utf8"));
+  const states = statesFromBinding(binding);
+  assert.equal(states[binding.statuses.readyToDeliver], "ready-to-deliver");
+  assert.equal(states[binding.statuses.inReview], "in-review");
+});

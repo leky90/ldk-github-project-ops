@@ -12,7 +12,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     const binding = typeof flags.get("binding") === "string" ? await readJson(flags.get("binding")) : undefined;
     const bindingErrors = binding ? validateProjectBinding(binding) : [];
     if (bindingErrors.length) throw new Error(`invalid binding: ${bindingErrors.join("; ")}`);
-    process.stdout.write(`${renderWorkComment(await readJson(positional[0]), { roles: binding?.workflow?.roles })}\n`);
+    process.stdout.write(`${renderWorkComment(await readJson(positional[0]), { roles: resolveBindingRoles(binding) })}\n`);
   } catch (error) {
     process.stderr.write(`${error.message}\n`);
     process.exitCode = 2;

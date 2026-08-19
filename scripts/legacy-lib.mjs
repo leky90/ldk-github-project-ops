@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 const SECRET_PATTERNS = [
-  /\bgh[opsu]_[A-Za-z0-9_]{20,}\b/u,
+  /\bgh[opusr]_[A-Za-z0-9_]{20,}\b/u,
   /\bgithub_pat_[A-Za-z0-9_]{20,}\b/u,
   /\bBearer\s+[A-Za-z0-9._-]{20,}\b/iu,
   /\b(?:GITHUB_TOKEN|GH_TOKEN)\s*=/iu,

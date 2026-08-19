@@ -55,6 +55,12 @@ export function migrateHandoff(input, { targetVersion = 2 } = {}) {
   if (artifact.type === "review" && artifact.review?.decision === "passed" && !artifact.review?.independence) {
     decisions.push(decision("missing-review-independence", "review.independence", "Record fresh-session, fresh-subagent, or external-reviewer for the passed review."));
   }
+  if (artifact.type === "blocked" && !artifact.blocker) {
+    decisions.push(decision("missing-blocker-details", "blocker", "Record the blocker reason, impact, neededFrom, and resumeWhen before mutation."));
+  }
+  if (input.schemaVersion === 1 && input.next?.status !== undefined && artifact.transition === undefined) {
+    decisions.push(decision("unmapped-transition", "transition", `Map legacy next.status ${JSON.stringify(input.next.status)} to a logical state.`));
+  }
   const diagnostics = { warnings: [], decisions };
   const eligibleForApply = decisions.length === 0 && validateHandoff(artifact, { roles: null }).length === 0;
   return { artifact, diagnostics, eligibleForApply };
@@ -85,7 +91,7 @@ export function buildMigrationPlan({ sourcePath, outputPath, beforeArtifact, bef
   };
 }
 
-export async function writeMigrationSnapshot(plan, { directory = ".linear-ops/migrations" } = {}) {
+export async function writeMigrationSnapshot(plan, { directory = ".github-ops/migrations" } = {}) {
   const errors = validateMigrationPlan(plan);
   if (errors.length) throw new Error(`invalid migration plan: ${errors.join("; ")}`);
   const root = resolve(directory);
@@ -234,6 +240,7 @@ function migrateLegacyWorkPlan(input) {
       ...(issue.acceptanceCriteria ? { acceptanceCriteria: structuredClone(issue.acceptanceCriteria) } : {}),
       ...(issue.milestoneKey ? { milestoneKey: issue.milestoneKey } : {}),
       ...(issue.estimate !== undefined ? { estimate: issue.estimate } : {}),
+      ...(issue.estimateReason !== undefined ? { estimateReason: issue.estimateReason } : {}),
       resourceKeys: structuredClone(issue.resourceKeys ?? []),
       relations: {
         blockedByKeys: structuredClone(issue.blockedByKeys ?? []),
@@ -335,7 +342,7 @@ const LEGACY_PHASES = { "artifact-review": "review", "ready-to-deliver": "ready-
 const LEGACY_FROM_BY_TYPE = { handoff: "in-progress", review: "in-review", delivery: "ready-to-deliver", verification: "delivery-verification", blocked: "in-progress" };
 
 function statusToLogical(status) {
-  const token = String(status ?? "").trim().toLowerCase().replace(/\s+/gu, "-");
+  const token = String(status ?? "").trim().toLowerCase().replaceAll("_", "-").replace(/\s+/gu, "-");
   return ({
     refinement: "refinement", ready: "ready", "in-progress": "in-progress", "in-review": "in-review",
     "ready-to-deliver": "ready-to-deliver", "delivery-verification": "delivery-verification",
@@ -352,7 +359,7 @@ function migrateHandoffV1(input) {
     type: event.type,
     issueId: input.issue,
     fromRole: input.fromRole,
-    ...(input.toRole ? { toRole: input.toRole } : {}),
+    ...((input.toRole ?? input.next?.role) ? { toRole: input.toRole ?? input.next.role } : {}),
     summary: input.summary,
     ...(to ? { transition: { from: LEGACY_FROM_BY_TYPE[event.type], to } } : {}),
     ...(input.deliverables ? { deliverables: structuredClone(input.deliverables) } : {}),

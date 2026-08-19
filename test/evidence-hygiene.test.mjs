@@ -128,3 +128,24 @@ test("software handoff field values are validated at runtime", async () => {
   assert.ok(errors.some((e) => /software\.pullRequestUrl/u.test(e)), errors.join("; "));
   assert.ok(errors.some((e) => /software\.branchPushed/u.test(e)), errors.join("; "));
 });
+
+test("Projects v2 item timestamp participates in the freshness gate", async () => {
+  const { validateHandoffAgainstIssue } = await import("../scripts/lib.mjs");
+  const handoff = await loadHandoff();
+  handoff.observedState.itemUpdatedAt = "2026-08-18T10:01:00.000Z";
+  assert.equal(validateHandoff(handoff).length, 0, "itemUpdatedAt is part of the observedState contract");
+
+  const live = {
+    id: "octo-org/product#123",
+    updatedAt: handoff.observedState.issueUpdatedAt,
+    itemUpdatedAt: "2026-08-18T10:07:00.000Z",
+    status: "In Review",
+    logicalState: "in-review",
+  };
+  const errors = validateHandoffAgainstIssue(handoff, live);
+  assert.ok(errors.some((e) => /item.*changed|itemUpdatedAt/u.test(e)),
+    "a Projects v2 field edit (item timestamp moved, issue timestamp unchanged) must fail the gate");
+
+  live.itemUpdatedAt = "2026-08-18T10:01:00.000Z";
+  assert.deepEqual(validateHandoffAgainstIssue(handoff, live), []);
+});

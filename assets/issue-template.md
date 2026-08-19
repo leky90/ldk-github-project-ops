@@ -28,3 +28,5 @@
 ## Resources
 
 - {{resource_link}}
+
+<!-- github-project-ops:{"key":"{{stable_key}}","plan":"{{plan_id}}"} -->

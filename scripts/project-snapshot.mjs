@@ -16,7 +16,6 @@ export function normalizeProjectSnapshot(snapshot) {
   if (!snapshot?.project) throw new Error("snapshot.project is required");
   const normalized = structuredClone(snapshot);
   if (!Array.isArray(normalized.issues) && Array.isArray(normalized.items)) normalized.issues = normalized.items;
-  normalized.initiatives = Array.isArray(normalized.initiatives) ? normalized.initiatives : [];
   normalized.phases = Array.isArray(normalized.phases) ? normalized.phases : [];
   normalized.milestones = Array.isArray(normalized.milestones) ? normalized.milestones : [];
   const states = normalized.workflow?.states;
@@ -42,7 +41,10 @@ export function deriveLogicalIssueState(issue = {}, { states } = {}) {
   const handoff = issue.latestHandoff;
   let handoffStale = false;
   if (handoff !== undefined) {
-    const issueId = issue.id ?? issue.key;
+    // Projects v2 rows carry the item node id in `id`; the handoff identity is
+    // always the owner/repo#N key, so prefer whichever field matches that form.
+    const GITHUB_ISSUE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#[1-9][0-9]*$/u;
+    const issueId = [issue.key, issue.id].find((value) => typeof value === "string" && GITHUB_ISSUE.test(value)) ?? issue.key ?? issue.id;
     // A run's own final comment/status writes advance updatedAt past the
     // pre-mutation observation, so the post-mutation re-read (appliedState)
     // is the timestamp that can actually stay fresh.

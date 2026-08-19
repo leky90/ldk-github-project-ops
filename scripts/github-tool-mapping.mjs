@@ -1,7 +1,7 @@
 const MUTATION_VERBS = new Set([
   "create", "update", "add", "remove", "delete", "merge", "push", "close", "reopen",
   "fork", "submit", "request", "reprioritize", "transfer", "archive", "set", "edit",
-  "assign", "dispatch",
+  "assign", "dispatch", "run", "rerun", "cancel", "dismiss", "mark", "manage",
 ]);
 const READ_VERBS = new Set(["get", "list", "search", "download", "compare"]);
 
@@ -21,6 +21,11 @@ const KNOWN_GITHUB_OPERATIONS = new Set([
   "create_branch", "list_branches", "list_commits", "get_commit",
   "search_code", "search_users",
   "create_milestone", "update_milestone", "list_milestones",
+  "create_pending_pull_request_review", "add_comment_to_pending_review",
+  "submit_pending_pull_request_review", "delete_pending_pull_request_review",
+  "update_pull_request_branch", "create_gist", "run_workflow",
+  "list_notifications", "get_notification_details", "dismiss_notification",
+  "mark_all_notifications_read", "manage_notification_subscription",
   "add_project_item", "update_project_item", "delete_project_item",
   "list_project_items", "list_project_fields", "get_project", "list_projects",
 ]);
@@ -55,4 +60,18 @@ export function mapStatusOption(binding, logicalState) {
   const option = key ? binding?.statuses?.[key] : undefined;
   if (!option) throw new Error(`no bound status option for logical state ${logicalState}`);
   return option;
+}
+
+export function statesFromBinding(binding) {
+  const logicalByKey = {
+    refinement: "refinement", ready: "ready", inProgress: "in-progress", inReview: "in-review",
+    readyToDeliver: "ready-to-deliver", deliveryVerification: "delivery-verification",
+    blocked: "blocked", done: "done", canceled: "canceled",
+  };
+  const states = {};
+  for (const [key, logical] of Object.entries(logicalByKey)) {
+    const name = binding?.statuses?.[key];
+    if (typeof name === "string" && name.trim()) states[name] = logical;
+  }
+  return states;
 }

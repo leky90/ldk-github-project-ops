@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { parseCli, readJson, validateProjectBinding, validateWorkPlan } from "./lib.mjs";
+import { parseCli, readJson, resolveBindingRoles, validateProjectBinding, validateWorkPlan } from "./lib.mjs";
 
 const { positional, flags } = parseCli(process.argv.slice(2));
 if (positional.length !== 1) {
@@ -8,7 +8,7 @@ if (positional.length !== 1) {
 }
 try {
   const plan = await readJson(positional[0]);
-  const binding = flags.binding ? await readJson(flags.binding) : undefined;
+  const binding = flags.get("binding") ? await readJson(flags.get("binding")) : undefined;
   const bindingErrors = binding ? validateProjectBinding(binding).map((error) => `binding: ${error}`) : [];
   const errors = [
     ...bindingErrors,
@@ -17,7 +17,8 @@ try {
       projectNumber: binding?.github?.projectNumber,
       repositories: binding?.github?.repositories,
       binding,
-      forApply: Boolean(flags.apply),
+      roles: binding ? resolveBindingRoles(binding) : undefined,
+      forApply: flags.has("apply"),
     }),
   ];
   process.stdout.write(`${JSON.stringify({ valid: errors.length === 0, errors: [...new Set(errors)] }, null, 2)}\n`);

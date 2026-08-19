@@ -198,7 +198,7 @@ test("hook routes create, issue execution, status, and reconciliation", async ()
   assert.match(await run("Hãy thực hiện issue example-org\/product#42"), /\$github-do-issue/u);
   assert.match(await run("Hãy báo cáo Project status và health"), /\$github-project-status/u);
   assert.match(await run("Hãy reconcile resolved blocker"), /\$github-reconcile/u);
-  assert.match(await run("Hãy breakdown backlog thành sub-issues, estimate nhẹ và tạo các views chuẩn"), /\$github-create-work.*schema-v2 standard views/u);
+  assert.match(await run("Hãy breakdown backlog thành sub-issues, estimate nhẹ và tạo các views chuẩn"), /\$github-create-work.*standard saved views/u);
 });
 
 test("hook arbitrates GitHub and Linear without dual-routing generic work", async () => {

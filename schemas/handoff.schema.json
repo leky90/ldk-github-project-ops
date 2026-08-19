@@ -71,6 +71,9 @@
         },
         "logicalState": {
           "$ref": "#/$defs/logicalState"
+        },
+        "itemUpdatedAt": {
+          "$ref": "#/$defs/timestamp"
         }
       }
     },
@@ -375,6 +378,9 @@
         "status": {
           "type": "string",
           "minLength": 1
+        },
+        "itemUpdatedAt": {
+          "$ref": "#/$defs/timestamp"
         }
       },
       "description": "Live issue state re-read after this event's own mutations landed; keeps the handoff fresh for status reporting."

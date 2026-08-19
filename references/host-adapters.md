@@ -52,5 +52,8 @@ catalog is treated as GitHub. Projects v2 GraphQL mutations issued through the
 `gh` CLI run outside MCP classification; the skill's pre/post-mutation
 discipline applies to them directly.
 
-Map logical states to bound Projects v2 status option ids with
-`mapStatusOption(binding, logicalState)`; never write a status by display name.
+Map logical states to the bound canonical status names with
+`mapStatusOption(binding, logicalState)`, then resolve the live option ID for
+that name immediately before the write; never hard-code option IDs and never
+write a value the live field no longer offers. Invert the same binding map with
+`statesFromBinding(binding)` when normalizing snapshots.

@@ -4,6 +4,7 @@ import {
   readJson,
   validateHandoff,
   validateHandoffAgainstIssue,
+  resolveBindingRoles,
   validateProjectBinding,
 } from "./lib.mjs";
 import { validateLiveGitDelivery } from "./git-delivery-state.mjs";
@@ -21,7 +22,7 @@ try {
   const currentIssue = typeof flags.get("current-issue") === "string" ? await readJson(flags.get("current-issue")) : undefined;
   const errors = [
     ...(binding ? validateProjectBinding(binding).map((error) => `binding: ${error}`) : []),
-    ...validateHandoff(handoff, { roles: binding?.workflow?.roles }),
+    ...validateHandoff(handoff, { roles: resolveBindingRoles(binding) }),
   ];
   if (flags.has("for-mutation")) {
     if (!currentIssue) errors.push("live-state: --current-issue is required for mutation validation");

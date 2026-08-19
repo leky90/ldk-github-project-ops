@@ -40,7 +40,7 @@ view request, also read [project-setup.md](../../references/project-setup.md) an
    `$github-do-issue` with `planningStage: outcome-decomposition`. Persist
    logical phases as one
    `<!-- github-project-ops:phases [{"key":"...","order":1,"objective":"..."}] -->`
-   marker block in the Project description so any session reconstructs the same
+   marker block in the Project README so any session reconstructs the same
    `snapshot.phases`. Use native issue dependencies for blockers, repository
    milestones for achieved-state checkpoints, and Project iterations for
    recurring time boxes. Follow
@@ -56,22 +56,28 @@ view request, also read [project-setup.md](../../references/project-setup.md) an
    [delivery-lifecycle.md](../../references/delivery-lifecycle.md). Split artifact
    approval from merge, deployment, publishing, outreach, filing, spending, or
    other terminal action when authority or evidence differs.
-9. Default to lightweight estimation: one relative Fibonacci point from
-   `1, 2, 3, 5, 8, 13` on executable tasks and decisions when it helps sequencing
-   or capacity planning. Omit estimates from parent outcomes to avoid double
-   counting. If an item cannot be usefully sized, record a short `estimateReason`;
-   do not require hour-by-hour effort narratives. Use `estimation.mode: none` when
-   sizing adds no decision value.
+9. Estimates are optional relative points on executable tasks and decisions
+   when they help sequencing or capacity planning; prefer the Fibonacci scale.
+   Omit estimates from parent outcomes to avoid double counting, and record a
+   short `estimateReason` when an item cannot be usefully sized. Skip sizing
+   entirely when it adds no decision value.
 10. Audit setup even for an existing Project. Fields, built-in workflows, and
     the standard saved views are operational configuration managed directly —
     the v4 plan does not carry them. Preserve custom semantics; preview
     conflicts instead of silently rewriting them.
-11. Validate the plan with `validate-work-plan.mjs`; require `--apply` for writes.
-    Apply setup prerequisites and resources first, then milestones, parent issues,
-    sub-issues, Project membership and field values, followed by dependencies.
+11. Validate the plan with `validate-work-plan.mjs --binding <binding.json>`;
+    require `--apply` for writes. Append the plugin marker
+    `<!-- github-project-ops:{"key":"<stable-key>","plan":"<planId>"} -->` to
+    every issue body and milestone description the plugin creates, and keep a
+    local apply journal at `.github-ops/applies/<planId>.json` with one entry
+    per intended object updated after each mutation, so an interrupted apply
+    resumes from the exact failure point instead of duplicating work. Apply
+    per issue: create the Issue, add it to the Project, and set its field
+    values immediately — before moving to the next issue — so a capability or
+    scope failure strands at most one object; wire dependencies last.
 12. Re-read every created object, saved view, field value, and both ends of each
     relation. Capture `schemas/project-result.schema.json` and require
-    `validate-project-result.mjs` to pass. Reconcile the coverage map against actual items. Report created,
+    `validate-project-result.mjs` to pass. Reconcile every plan key against actual created items. Report created,
     updated, skipped, conflicted, and failed items with direct GitHub links. A partial
     apply is not complete merely because some issues exist.
 

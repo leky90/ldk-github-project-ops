@@ -6,7 +6,7 @@ artifact requires a migration preview, no unresolved decisions, an unchanged
 source hash, and successful canonical validation.
 
 The project binding stays schemaVersion 1 (owner, projectNumber, repositories,
-Projects v2 field and status option ids, roles); it did not change generations.
+Projects v2 field names, canonical status display names, roles); it did not change generations.
 
 ## Work plan mapping
 

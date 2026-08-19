@@ -143,3 +143,43 @@ test("a canonical v4 plan passes apply-mode validation", async () => {
   plan.mode = "apply";
   assert.deepEqual(validateWorkPlan(plan, { forApply: true }), [], "v4 is the canonical write contract; apply must not demand migration");
 });
+
+test("apply-mode validation is enforced for canonical v4 plans", async () => {
+  const plan = await validPlan();
+  assert.match(validateWorkPlan(plan, { forApply: true }).join("\n"), /mode must be apply/u, "a preview plan cannot authorize mutations");
+  plan.mode = "apply";
+  assert.deepEqual(validateWorkPlan(plan, { forApply: true }), []);
+});
+
+test("work-plan CLI honors --binding and --apply", async () => {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const { mkdtemp, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const exec = promisify(execFile);
+  const dir = await mkdtemp(join((0, tmpdir)(), "wp-cli-"));
+  const plan = await validPlan();
+  await writeFile(join(dir, "plan.json"), JSON.stringify(plan));
+  const binding = JSON.parse(await readFile(join(root, "tests", "fixtures", "valid-project-binding.json"), "utf8"));
+  binding.github.owner = "different-org";
+  await writeFile(join(dir, "binding.json"), JSON.stringify(binding));
+  const cli = join(root, "scripts", "validate-work-plan.mjs");
+  const result = await exec(process.execPath, [cli, join(dir, "plan.json"), "--binding", join(dir, "binding.json"), "--apply"]).catch((error) => error);
+  assert.notEqual(result.code, 0, "mismatched binding owner plus preview mode must fail");
+  assert.match(String(result.stdout), /does not match bound owner|mode must be apply/u);
+});
+
+test("binding-declared roles validate handoffs and plans", async () => {
+  const { resolveBindingRoles } = await import("../scripts/lib.mjs");
+  const binding = JSON.parse(await readFile(join(root, "tests", "fixtures", "valid-project-binding.json"), "utf8"));
+  binding.roles = ["support", "tech-lead"];
+  const roles = resolveBindingRoles(binding);
+  assert.ok(Object.hasOwn(roles, "support"), "binding array roles resolve into the role map");
+  assert.ok(Object.hasOwn(roles, "cpo"), "defaults stay available");
+  const handoff = JSON.parse(await readFile(join(root, "tests", "fixtures", "valid-handoff-v2.json"), "utf8"));
+  const { validateHandoff } = await import("../scripts/lib.mjs");
+  handoff.fromRole = "support";
+  handoff.toRole = "support";
+  handoff.delivery.ownerRole = "support";
+  assert.deepEqual(validateHandoff(handoff, { roles }), []);
+});

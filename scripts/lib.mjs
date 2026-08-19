@@ -167,6 +167,14 @@ function validateStringArray(value, location, errors, { nonEmpty = false } = {})
   value.forEach((entry, index) => requiredString(entry, `${location}[${index}]`, errors));
 }
 
+export function resolveBindingRoles(binding) {
+  const roles = structuredClone(DEFAULT_ROLES);
+  for (const slug of binding?.roles ?? []) {
+    if (typeof slug === "string" && slug.trim() && !Object.hasOwn(roles, slug)) roles[slug] = { label: slug };
+  }
+  return roles;
+}
+
 export function normalizeProjectBinding(binding) {
   return structuredClone(binding);
 }
@@ -263,8 +271,6 @@ export function validateWorkPlan(plan, { owner, projectNumber, repositories, bin
     validateOptionalDate(project.startDate, "project.startDate", errors);
     validateOptionalDate(project.targetDate, "project.targetDate", errors);
     if (isDateAfter(project.startDate, project.targetDate)) errors.push("project.startDate cannot be after project.targetDate");
-    if (project.memberIds !== undefined) validateStringArray(project.memberIds, "project.memberIds", errors);
-    if (project.initiativeKeys !== undefined) validateStringArray(project.initiativeKeys, "project.initiativeKeys", errors);
   }
 
   const milestones = Array.isArray(plan.milestones) ? plan.milestones : [];
@@ -394,6 +400,8 @@ export function validateWorkPlan(plan, { owner, projectNumber, repositories, bin
 
 function validateWorkPlanV4(plan, options) {
   const errors = [];
+  if (!new Set(["preview", "apply"]).has(plan.mode)) errors.push("mode must be preview or apply");
+  if (options.forApply && plan.mode !== "apply") errors.push("mode must be apply for mutations");
   const allowedPriorities = new Set(["urgent", "high", "normal", "low"]);
   const compatibilityPlan = structuredClone(plan);
   compatibilityPlan.schemaVersion = 3;
@@ -478,8 +486,17 @@ function validateWorkPlanV4(plan, options) {
       if (!parent || parent.priority !== item.priority) errors.push(`${at}.prioritySource inherited requires the direct parent priority to match`);
     }
     if (item?.phaseKey !== undefined && !phaseKeys.has(item.phaseKey)) errors.push(`${at}.phaseKey references unknown phase ${item.phaseKey}`);
+    if (item?.githubIssue !== undefined && (typeof item.githubIssue !== "string" || !GITHUB_ISSUE_PATTERN.test(item.githubIssue))) {
+      errors.push(`${at}.githubIssue must be owner/repo#number`);
+    }
+    if (item?.milestoneKey !== undefined) {
+      const milestone = milestones.find((candidate) => candidate?.key === item.milestoneKey);
+      if (milestone && item?.repository && milestone.repository !== item.repository) {
+        errors.push(`${at}.milestoneKey references a milestone in ${milestone.repository}, but the issue lives in ${item.repository}`);
+      }
+    }
     for (const field of ["title", "outcome", "context", "deliverable"]) {
-      if (containsPrivateLocalPath(item?.[field])) errors.push(`${at}.${field} contains a private local path and must not reach Linear`);
+      if (containsPrivateLocalPath(item?.[field])) errors.push(`${at}.${field} contains a private local path and must not reach GitHub`);
     }
 
     const checks = item?.delivery?.verification;
@@ -507,11 +524,11 @@ function validateWorkPlanV4(plan, options) {
 
   (Array.isArray(plan.resources) ? plan.resources : []).forEach((resource, index) => {
     for (const field of ["title", "content", "url"]) {
-      if (containsPrivateLocalPath(resource?.[field])) errors.push(`resources[${index}].${field} contains a private local path and must not reach Linear`);
+      if (containsPrivateLocalPath(resource?.[field])) errors.push(`resources[${index}].${field} contains a private local path and must not reach GitHub`);
     }
   });
   for (const field of ["name", "summary", "description"]) {
-    if (containsPrivateLocalPath(plan.project?.[field])) errors.push(`project.${field} contains a private local path and must not reach Linear`);
+    if (containsPrivateLocalPath(plan.project?.[field])) errors.push(`project.${field} contains a private local path and must not reach GitHub`);
   }
 
   errors.push(...validatePlanningStructure(plan));
@@ -647,11 +664,12 @@ function validateHandoffV2(handoff, { roles }) {
   validateRole(handoff.toRole, "toRole", roles, errors, { optional: true });
   validateTimestamp(handoff.observedAt, "observedAt", errors);
 
-  rejectUnknownProperties(handoff.observedState, new Set(["issueUpdatedAt", "status", "logicalState"]), "observedState", errors);
+  rejectUnknownProperties(handoff.observedState, new Set(["issueUpdatedAt", "itemUpdatedAt", "status", "logicalState"]), "observedState", errors);
   if (!handoff.observedState || typeof handoff.observedState !== "object" || Array.isArray(handoff.observedState)) {
     errors.push("observedState must be an object");
   } else {
     validateTimestamp(handoff.observedState.issueUpdatedAt, "observedState.issueUpdatedAt", errors);
+    if (handoff.observedState.itemUpdatedAt !== undefined) validateTimestamp(handoff.observedState.itemUpdatedAt, "observedState.itemUpdatedAt", errors);
     requiredString(handoff.observedState.status, "observedState.status", errors);
     requiredString(handoff.observedState.logicalState, "observedState.logicalState", errors);
     if (Date.parse(handoff.observedAt) < Date.parse(handoff.observedState.issueUpdatedAt)) errors.push("observedAt cannot be before observedState.issueUpdatedAt");
@@ -792,8 +810,14 @@ export function validateHandoffAgainstIssue(handoff, issue) {
   const errors = [];
   if (handoff?.schemaVersion !== 2) return ["handoff v2 is required for live-state validation"];
   if (!issue || typeof issue !== "object" || Array.isArray(issue)) return ["current issue snapshot is required"];
-  if (handoff.issueId !== issue.id) errors.push(`handoff issueId ${handoff.issueId} does not match current issue ${issue.id}`);
+  const liveId = [issue.id, issue.key].find((value) => typeof value === "string" && GITHUB_ISSUE_PATTERN.test(value)) ?? issue.id;
+  if (handoff.issueId !== liveId) errors.push(`handoff issueId ${handoff.issueId} does not match current issue ${liveId}`);
   if (handoff.observedState?.issueUpdatedAt !== issue.updatedAt) errors.push("handoff observation is stale; issueUpdatedAt changed");
+  // GitHub Projects v2 field edits do NOT advance Issue.updatedAt, so the item
+  // timestamp must be compared whenever the live snapshot carries it.
+  if (issue.itemUpdatedAt !== undefined && handoff.observedState?.itemUpdatedAt !== issue.itemUpdatedAt) {
+    errors.push("handoff observation is stale; the Projects v2 item changed (itemUpdatedAt mismatch)");
+  }
   if (typeof issue.status !== "string" || handoff.observedState?.status !== issue.status) errors.push("handoff observed physical status does not match current issue status");
   if (handoff.transition?.from !== issue.logicalState) errors.push("handoff transition.from does not match current logical state");
   return [...new Set(errors)];
@@ -875,7 +899,7 @@ export function renderWorkComment(handoff, { roles = DEFAULT_ROLES } = {}) {
     ? visibleEvidence.slice(0, 3).map((item) => `- **${commentText(item.label)}:** ${commentText(item.value)}`)
     : ["- Không có bằng chứng truy cập được đính kèm."];
   if (visibleEvidence.length > 3) evidence.push(`- +${visibleEvidence.length - 3} bằng chứng khác được giữ trong artifact bền vững.`);
-  if (hiddenLocalEvidenceCount > 0) evidence.push(`- ${hiddenLocalEvidenceCount} bằng chứng local-only được giữ ngoài Linear.`);
+  if (hiddenLocalEvidenceCount > 0) evidence.push(`- ${hiddenLocalEvidenceCount} bằng chứng local-only được giữ ngoài GitHub.`);
   const passedChecks = (handoff.checks ?? []).filter((item) => item.passed).length;
   const checks = handoff.checks?.length
     ? [

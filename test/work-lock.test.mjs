@@ -149,3 +149,12 @@ async function expireLease(root, liveness) {
   Object.assign(lease, liveness);
   await writeFile(leasePath, `${JSON.stringify(lease, null, 2)}\n`, { mode: 0o600 });
 }
+
+test("lease records carry the GitHub lock kind", async () => {
+  const { mkdtemp, readFile: rf } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join: j } = await import("node:path");
+  const root = await mkdtemp(j(tmpdir(), "github-lock-kind-"));
+  const lease = await acquireWorkLock({ root, issueId: "octo/product#9", role: "qa" });
+  assert.equal(lease.kind, "github-role-work-lock");
+});

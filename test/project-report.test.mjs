@@ -119,3 +119,27 @@ test("terminal items never sit in the blocker queue and closed blockers resolve"
   assert.doesNotMatch(report, /Blocked: .*Done with old blocker/u);
   assert.match(report, /Ready 1;/u);
 });
+
+test("Projects v2 node ids do not shadow the issue key for handoff matching", async () => {
+  const handoff = await fixture("valid-handoff-v2.json");
+  const derived = deriveLogicalIssueState({
+    id: "PVTI_2",
+    key: "octo-org/product#123",
+    status: "In Review",
+    updatedAt: handoff.observedState.issueUpdatedAt,
+    latestHandoff: handoff,
+  });
+  assert.deepEqual(derived, { state: "ready-to-deliver", source: "handoff", handoffStale: false });
+});
+
+test("lifecycle analysis follows the logical axis of the same report", async () => {
+  const snapshot = await fixture("project-snapshot.json");
+  snapshot.project.closed = true;
+  // items marked Done on the board while their Issues are still OPEN: the
+  // report counts 0 verified Done and lifecycle must keep treating them as
+  // open work under a closed Project
+  snapshot.items = snapshot.items.map((item) => ({ ...item, status: "Done", contentState: "OPEN" }));
+  const report = buildProjectReport(snapshot);
+  assert.match(report, /0\/4 items Done \(0%\)/u);
+  assert.doesNotMatch(report, /Consistency: \*\*Nhất quán\*\*/u, "board-Done with open content must not read as a consistent closed project");
+});

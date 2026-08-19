@@ -34,12 +34,6 @@
       },
       "additionalProperties": true
     },
-    "initiatives": {
-      "type": "array",
-      "items": {
-        "type": "object"
-      }
-    },
     "phases": {
       "type": "array",
       "items": {

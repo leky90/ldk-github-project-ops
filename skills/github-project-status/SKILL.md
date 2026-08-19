@@ -13,12 +13,18 @@ or close/reopen the Project only on a direct request with sufficient evidence.
    items, repository milestones, iterations, issue types, assignees, parent/sub-issue
    hierarchy, dependencies, linked PRs, checks, and recent human handoffs.
 2. Normalize the snapshot with `normalizeProjectSnapshot` before grouping.
-   Preserve physical `Status` and logical state separately; derive Ready to
-   Deliver or Delivery Verification only from a fresh validated handoff v2
-   (fresh means its `observedState` or post-mutation `appliedState` timestamp
-   matches the live item timestamp). Supply renamed status options as
-   `snapshot.workflow.states` so they normalize instead of degrading to
-   unknown, and put genuinely unrecognized states in an explicit unknown queue.
+   Preserve physical `Status` and logical state separately. The bound
+   `Ready to Deliver` and `Delivery Verification` status options are
+   authoritative physical states; a fresh validated handoff v2 (its
+   `observedState` or post-mutation `appliedState` timestamps matching the
+   live Issue and item timestamps) supplies the delivery phase detail and the
+   staleness diagnostics. Build `snapshot.workflow.states` from the binding
+   with `statesFromBinding(binding)` so renamed or non-English status options
+   normalize identically in every session, and put genuinely unrecognized
+   states in an explicit unknown queue. Treat an `In Progress` item with no
+   handoff at all as aging active work: past the local lock lease plus grace
+   window it is a candidate for the `in-progress → ready` reconciliation, not
+   healthy activity.
    Count an item as Done only with validated mode-specific terminal evidence;
    surface the rest as terminal mismatches.
 3. Compute item-count and estimated-effort progress separately; state

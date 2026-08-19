@@ -46,7 +46,7 @@ function resolveIntent(prompt) {
   if (/(?:hòa giải|hoà giải|reconcile|recover.*lock|sửa.*(?:project|issue).*(?:sai|lệch)|cleanup|dọn.*(?:item|issue|comment)|resolved blocker)/iu.test(prompt)) return { kind: "reconcile", skill: "github-reconcile" };
   if (/(?:báo cáo|tổng quan|tiến độ|project status|status report|project update|health|on track|at risk|off track|inactive|complete)/iu.test(prompt)) return { kind: "status", skill: "github-project-status" };
   if (/(?:tạo|khởi tạo|capture|brainstorm|prd|product brief|đề xuất|lên kế hoạch|phân rã|break\s*down|breakdown|sub-?issues?|views?|board|backlog|roadmap|estimate|ước lượng|chuẩn hóa|đồng bộ|sync|organize|update|cập nhật).*(?:issue|project|tính năng|dự án|công việc|milestone|roadmap|view|board|backlog|estimate)|(?:issue|project|milestone|sub-?issues?|views?|board|backlog|roadmap|estimate).*(?:tạo|khởi tạo|phân rã|break\s*down|breakdown|chuẩn hóa|đồng bộ|sync|organize|update|cập nhật)/iu.test(prompt)) return { kind: "create", skill: "github-create-work" };
-  if (/(?:thực hiện|xử lý|làm|review|kiểm thử|kiểm tra).*(?:issue|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+|#\d+)|(?:issue|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+|#\d+).*(?:thực hiện|xử lý|làm|review|kiểm thử|kiểm tra)/iu.test(prompt)) return { kind: "execute", skill: "github-do-issue" };
+  if (/(?:thực hiện|xử lý|làm|review|kiểm thử|kiểm tra|work on|do|perform|implement|execute|fix|deliver|ship).*(?:issue|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+|#\d+)|(?:issue|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+|#\d+).*(?:thực hiện|xử lý|làm|review|kiểm thử|kiểm tra)/iu.test(prompt)) return { kind: "execute", skill: "github-do-issue" };
   return null;
 }
 
@@ -54,7 +54,7 @@ function routeIntent(intent, binding) {
   const attrs = `owner="${escapeXml(binding.owner)}" project_number="${binding.projectNumber}"`;
   if (intent.kind === "reconcile") return wrap(attrs, "Use $github-reconcile. Scope repair to the named Project item and relations unless a Project-wide audit is explicitly requested. Preview destructive, close/reopen, archive, merge, and bulk changes.");
   if (intent.kind === "status") return wrap(attrs, "Use $github-project-status. Read Project open/closed state, latest native status update, item Status fields, milestones, dependencies, and PR delivery evidence. Reports are read-only; publish or close/reopen only on a direct request.");
-  if (intent.kind === "create") return wrap(attrs, "Use $github-create-work. Audit existing setup and coverage before writes; use schema-v2 standard views, actual parent Issues with direct sub-issues, dependencies, and lightweight estimates only where useful. Preview planning prompts; apply direct create/update prompts and verify the full result.");
+  if (intent.kind === "create") return wrap(attrs, "Use $github-create-work. Audit existing setup and coverage before writes; use the standard saved views, actual parent Issues with direct sub-issues, dependencies, and lightweight estimates only where useful. Preview planning prompts; apply direct create/update prompts and verify the full result.");
   return wrap(attrs, "Use $github-do-issue. Read the Issue, Project item fields, assignee, native dependencies, linked PRs, DoR/DoD, role, and delivery contract; perform one role phase; publish one human handoff; re-read every changed object.");
 }
 

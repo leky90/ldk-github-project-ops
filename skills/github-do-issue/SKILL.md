@@ -19,9 +19,12 @@ issue or adopt the next role unless the user explicitly expands the request.
    that scope.
 3. Determine the action from Project `Status`:
    - `Ready`: claim first — assign the authenticated user and move the item to
-     `In Progress` before performing the owner role, so concurrent sessions
-     collide at claim time and the handoff's `transition.from: in-progress`
-     matches live state.
+     `In Progress` before performing the owner role, then re-read and verify
+     you are the sole assignee (GitHub assignment is additive, so a second
+     claimer appears as an extra assignee rather than a failed write; if one
+     appears, stop and coordinate instead of duplicating the phase). The claim
+     is what makes the handoff's `transition.from: in-progress` match live
+     state.
    - `In Progress`: resume the current role phase when this run holds the
      claim; when another live owner's claim is visible, stop and report.
      Abandoned active work returns to `Ready` through a reconciliation event.
@@ -29,9 +32,12 @@ issue or adopt the next role unless the user explicitly expands the request.
    - `Ready to Deliver`: perform only the authorized terminal action.
    - `Delivery Verification`: verify terminal evidence and cleanup.
    - `Refinement`: when this run's role owns the contract, perform the
-     refinement itself — a decision issue's decision work happens here; promote
-     to `Ready` with a reconciliation event once DoR passes. Otherwise explain
-     the missing input and stop.
+     refinement that makes the work decidable — gather context, options, and
+     stakeholders until the Definition of Ready passes — then promote to
+     `Ready` with a reconciliation event. The decision itself is decided,
+     recorded, and independently reviewed in the normal claim → In Review →
+     Done cycle under delivery mode `decision`. Otherwise explain the missing
+     input and stop.
    - `Blocked`: explain the missing input; do not execute.
    - `Done` or `Canceled`, or a closed Issue: do not repeat delivery. For software,
      reconcile safe local Git closure if relevant, then stop.
@@ -64,7 +70,7 @@ issue or adopt the next role unless the user explicitly expands the request.
    open or update the linked PR as required by DoD. Follow
    [software-work.md](../../references/software-work.md).
 4. Update durable resources first. Create a local handoff v2 JSON matching
-   `schemas/handoff.schema.json` (observed issue state and timestamp, explicit
+   `schemas/handoff.schema.json` (observed Issue `updatedAt` AND Projects v2 item `updatedAt` — field edits do not advance the Issue timestamp — plus explicit
    logical transition, typed shared/local evidence, typed delivery checks, and
    the resulting `delivery.phase`); validate it with
    `validate-handoff.mjs --for-mutation --current-issue <snapshot.json>` and

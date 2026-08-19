@@ -188,3 +188,32 @@ test("mixed terminal boundaries survive re-preview instead of being laundered", 
   const second = migrateWorkPlan(first.artifact);
   assert.equal(second.eligibleForApply, false, "re-previewing the migrated artifact must not launder the unresolved boundary");
 });
+
+test("migration preserves estimateReason, next.role, and diagnoses blocked handoffs", async () => {
+  const plan = await readJson(fixture("valid-work-plan.json"));
+  plan.issues[1].estimate = undefined;
+  plan.issues[1].estimateReason = "Exploration cannot be sized usefully.";
+  const migrated = migrateWorkPlan(plan);
+  const carried = migrated.artifact.issues[1];
+  assert.equal(carried.estimateReason, "Exploration cannot be sized usefully.");
+
+  const handoff = await readJson(fixture("legacy-handoff-v1.json"));
+  delete handoff.toRole;
+  handoff.next.role = "software-engineer";
+  const out = migrateHandoff(handoff);
+  assert.equal(out.artifact.toRole, "software-engineer", "next.role backfills toRole");
+
+  const blocked = await readJson(fixture("legacy-handoff-v1.json"));
+  blocked.outcome = "blocked";
+  blocked.next = { status: "Blocked", action: "Wait for vendor approval.", role: "cpo" };
+  const blockedOut = migrateHandoff(blocked);
+  assert.ok(
+    blockedOut.diagnostics.decisions.some((entry) => entry.code === "missing-blocker-details"),
+    "blocked outcomes need blocker details resolved",
+  );
+
+  const weird = await readJson(fixture("legacy-handoff-v1.json"));
+  weird.next.status = "Ready_To_Deliver";
+  const weirdOut = migrateHandoff(weird);
+  assert.equal(weirdOut.artifact.transition?.to, "ready-to-deliver", "underscored statuses normalize");
+});

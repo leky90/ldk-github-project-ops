@@ -55,7 +55,7 @@ export async function acquireWorkLock({ root = ".", issueId, role, leaseMinutes 
     const now = new Date().toISOString();
     const lease = {
       schemaVersion: 1,
-      kind: "linear-role-work-lock",
+      kind: "github-role-work-lock",
       issueId: issueId.trim(),
       role: role.trim(),
       owner,

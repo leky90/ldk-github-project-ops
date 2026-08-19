@@ -41,8 +41,9 @@ Each requires a direct request and post-mutation re-read.
 
 `lifecycle.mode`, completion criteria, and logical phases are contract metadata
 rather than native Projects v2 properties. Persist each as a single
-machine-readable marker block in the Project description (or a linked lifecycle
-resource when the description is owner-managed) — phases as
+machine-readable marker block in the Project README (Projects v2 short
+description is one plain-text line and cannot hold markers; use the README or a
+linked lifecycle resource) — phases as
 `<!-- github-project-ops:phases [{"key":"...","order":1,"objective":"..."}] -->`
 and lifecycle as
 `<!-- github-project-ops:lifecycle {"mode":"...","completionCriteria":[...]} -->` —

@@ -146,6 +146,7 @@
         "acceptanceCriteria": [
           "Names cover the launch funnel"
         ],
+        "estimateReason": "Decision scope is bounded by authority rather than implementation effort.",
         "resourceKeys": [],
         "relations": {
           "blockedByKeys": [],
