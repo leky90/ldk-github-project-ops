@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
+import { classifyGitHubOperation } from "./github-tool-mapping.mjs";
 import { dirname, join, parse } from "node:path";
 
 const event = process.argv[2];
@@ -32,14 +33,12 @@ export function handle(name, payload, bindings) {
   const attrs = `owner="${escapeXml(binding.owner)}" project_number="${binding.projectNumber}"`;
   if (name === "SessionStart") return wrap(attrs, `This repository is bound to a GitHub Project v2${bindings.linear ? " and also has a Linear binding; explicit tracker signals win and generic tracker work must be clarified" : ""}. Preserve Project → milestone/iteration → parent Issue → sub-issue hierarchy. Use native dependencies and linked pull requests. For normal work, perform one role phase with $github-do-issue.`);
   const toolName = String(payload.tool_name ?? payload.toolName ?? "");
-  if (name === "PreToolUse" && isGitHubMutation(toolName)) return wrap(attrs, "Before mutating GitHub, verify the exact owner, Project number/node ID, repository, item ID, live field/option IDs, current assignee/role/state, native relations, delivery authority, and durable evidence. Do not publish machine telemetry or raw JSON.");
-  if (name === "PostToolUse" && isGitHubMutation(toolName)) return wrap(attrs, "Re-read the affected Project item and underlying Issue or pull request. Verify fields, assignee, hierarchy, dependency endpoints, comment, delivery evidence, and Project lifecycle match the actual result; report skipped, conflicted, and failed mutations.");
+  const operation = classifyGitHubOperation(toolName);
+  if ((name === "PreToolUse" || name === "PostToolUse") && operation === "unknown") return wrap(attrs, "Unknown GitHub tool operation. Treat this as a capability warning, read the tool contract, and do not mutate until its operation class is explicit.");
+  if (name === "PreToolUse" && operation === "mutation") return wrap(attrs, "Before mutating GitHub, verify the exact owner, Project number/node ID, repository, item ID, live field/option IDs, current assignee/role/state, native relations, delivery authority, and durable evidence. Do not publish machine telemetry or raw JSON.");
+  if (name === "PostToolUse" && operation === "mutation") return wrap(attrs, "Re-read the affected Project item and underlying Issue or pull request. Verify fields, assignee, hierarchy, dependency endpoints, comment, delivery evidence, and Project lifecycle match the actual result; report skipped, conflicted, and failed mutations.");
   if (name === "Stop") return wrap(attrs, "If Issue work occurred, leave at most one human handoff/review/blocked comment and release the local lock. Software delivery must account for scoped Git changes, PR state, tests, and terminal cleanup before Done.");
   return "";
-}
-
-function isGitHubMutation(name) {
-  return /(?:github|create|update|edit|delete|archive|close|reopen|assign|comment|label|project|issue|pull|relation|milestone|graphql)/iu.test(name);
 }
 
 function resolveIntent(prompt) {
@@ -61,7 +60,7 @@ function routeIntent(intent, binding) {
 
 export function classifyTracker(prompt, bindings) {
   const hasGitHubSignal = /(?:\bgithub\b|github\.com|\bgh\s+project\b|[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+#\d+)/iu.test(prompt);
-  const hasLinearSignal = /(?:\blinear\b|linear\.app|\b[A-Z][A-Z0-9]{1,9}-\d+\b)/iu.test(prompt);
+  const hasLinearSignal = /(?:\blinear\b|linear\.app)/iu.test(prompt) || /\b[A-Z][A-Z0-9]{1,9}-\d+\b/u.test(prompt);
   if (hasGitHubSignal && hasLinearSignal) return "ambiguous";
   if (hasGitHubSignal) return "github";
   if (hasLinearSignal) return "linear";

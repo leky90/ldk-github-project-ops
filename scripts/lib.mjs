@@ -106,17 +106,14 @@ export function parseCli(args) {
 }
 
 export function stableKey(...parts) {
-  const raw = parts.filter(Boolean).join(":").trim().toLowerCase();
-  const slug = raw
-    .replaceAll("đ", "d")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/gu, "")
-    .replace(/[^a-z0-9]+/gu, "-")
-    .replace(/^-|-$/gu, "")
-    .slice(0, 54) || "work";
-  const digest = createHash("sha256").update(raw).digest("hex").slice(0, 10);
-  return `${slug}-${digest}`;
+  return parts
+    .flat()
+    .filter((part) => part !== undefined && part !== null && String(part).trim())
+    .map((part) => String(part).trim().toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/gu, "").replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, ""))
+    .filter(Boolean)
+    .join(".");
 }
+
 
 export function findSecretPaths(value, path = "$", matches = []) {
   if (Array.isArray(value)) {
@@ -192,7 +189,7 @@ export function validateProjectBinding(binding, { allowPlaceholders = false } = 
         if (typeof repo !== "string" || !REPOSITORY_PATTERN.test(repo)) errors.push(`github.repositories[${index}] is invalid`);
       });
     }
-    if (!allowPlaceholders && typeof github.owner === "string" && /^(?:replace-with-|example-)/u.test(github.owner)) errors.push("github.owner is a placeholder");
+    if (!allowPlaceholders && typeof github.owner === "string" && /^replace-with-/u.test(github.owner)) errors.push("github.owner is a placeholder");
   }
   for (const field of ["status", "role", "priority", "deliveryPhase", "estimate"]) requiredString(binding.fields?.[field], `fields.${field}`, errors);
   for (const status of ["refinement", "ready", "inProgress", "inReview", "readyToDeliver", "deliveryVerification", "blocked", "done", "canceled"]) {

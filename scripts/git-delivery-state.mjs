@@ -59,6 +59,16 @@ function baselineIdentity(baseline) {
   return sha256(stableJson(payload));
 }
 
+function branchReferencesIssue(branchName, issueId) {
+  // GitHub issue ids ("owner/repo#42") are not valid branch substrings; the
+  // branch must reference the issue number as a standalone token, optionally
+  // with the repository name (e.g. issue-42-launch, product-42, 42-fix).
+  const branch = String(branchName ?? "").toLowerCase();
+  const match = /#(\d+)$/u.exec(String(issueId ?? "").trim());
+  if (!match) return branch.includes(String(issueId ?? "").trim().toLowerCase());
+  return new RegExp(`(?:^|[^0-9])${match[1]}(?:[^0-9]|$)`, "u").test(branch);
+}
+
 export async function captureGitBaseline({ repository = ".", issueId, worktreeIsolation = "required" }) {
   if (typeof issueId !== "string" || !issueId.trim()) throw new Error("issueId is required");
   if (!new Set(["required", "allow-clean-primary"]).has(worktreeIsolation)) {
@@ -71,8 +81,8 @@ export async function captureGitBaseline({ repository = ".", issueId, worktreeIs
   if (worktreeIsolation === "required" && state.worktreeMode !== "linked-worktree") {
     throw new Error("a dedicated linked Git worktree is required");
   }
-  if (!state.branchName.toLowerCase().includes(issueId.trim().toLowerCase())) {
-    throw new Error("the issue branch name must contain issueId");
+  if (!branchReferencesIssue(state.branchName, issueId)) {
+    throw new Error("the issue branch name must reference the issue number");
   }
 
   const baseline = {
@@ -106,8 +116,8 @@ export function validateGitBaseline(baseline) {
   if (!new Set(["primary-worktree", "linked-worktree"]).has(baseline.worktreeMode)) errors.push("Git baseline worktreeMode is invalid");
   if (typeof baseline.branchName !== "string" || !baseline.branchName.trim()) errors.push("Git baseline branchName is required");
   if (typeof baseline.branchName === "string" && typeof baseline.issueId === "string"
-    && !baseline.branchName.toLowerCase().includes(baseline.issueId.trim().toLowerCase())) {
-    errors.push("Git baseline branchName must contain issueId");
+    && !branchReferencesIssue(baseline.branchName, baseline.issueId)) {
+    errors.push("Git baseline branchName must reference the issue number");
   }
   if (typeof baseline.baselineCommit !== "string" || !SHA_PATTERN.test(baseline.baselineCommit)) errors.push("Git baseline baselineCommit is invalid");
   if (baseline.clean !== true) errors.push("Git baseline must be clean");
