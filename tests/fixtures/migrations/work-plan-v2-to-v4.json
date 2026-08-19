@@ -1,0 +1,176 @@
+{
+  "artifact": {
+    "schemaVersion": 4,
+    "kind": "github-role-work-plan",
+    "mode": "preview",
+    "planningStage": "outcome-decomposition",
+    "summary": "Migrated legacy GitHub work plan.",
+    "project": {
+      "owner": "example-org",
+      "number": 7,
+      "lifecycle": {
+        "mode": "continuous",
+        "completionCriteria": [
+          "CPO confirms the declared product end-state"
+        ]
+      }
+    },
+    "phases": [],
+    "milestones": [
+      {
+        "key": "launch",
+        "repository": "example-org/product",
+        "name": "Public launch"
+      }
+    ],
+    "resources": [
+      {
+        "key": "product.prd",
+        "title": "Product PRD",
+        "type": "url",
+        "url": "https://github.com/example-org/product/blob/main/docs/prd.md"
+      }
+    ],
+    "issues": [
+      {
+        "key": "product.launch",
+        "repository": "example-org/product",
+        "type": "outcome",
+        "title": "Launch the product",
+        "outcome": "Launch scope is traceable to the PRD",
+        "deliverable": "Implementation tasks are independently owned",
+        "delivery": {
+          "mode": "artifact-review",
+          "ownerRole": "cpo",
+          "verification": [
+            {
+              "mode": "artifact-review",
+              "check": "CPO accepts the technical breakdown"
+            }
+          ]
+        },
+        "status": "Ready",
+        "priority": "high",
+        "ownerRole": "tech-lead",
+        "definitionOfReady": [
+          "PRD approved"
+        ],
+        "definitionOfDone": [
+          "Implementation tasks are independently owned"
+        ],
+        "acceptanceCriteria": [
+          "Launch scope is traceable to the PRD"
+        ],
+        "milestoneKey": "launch",
+        "resourceKeys": [
+          "product.prd"
+        ],
+        "relations": {
+          "blockedByKeys": [],
+          "relatedToKeys": []
+        },
+        "prioritySource": "explicit"
+      },
+      {
+        "key": "product.implementation",
+        "repository": "example-org/product",
+        "type": "task",
+        "parentKey": "product.launch",
+        "title": "Implement launch scope",
+        "outcome": "Required user journey passes",
+        "deliverable": "Pull request and tests are ready for QA",
+        "delivery": {
+          "mode": "software-merge",
+          "ownerRole": "tech-lead",
+          "target": "main",
+          "verification": [
+            {
+              "mode": "software-merge",
+              "check": "PR merged to main"
+            },
+            {
+              "mode": "software-merge",
+              "check": "Post-merge checks pass"
+            }
+          ]
+        },
+        "status": "Ready",
+        "priority": "high",
+        "ownerRole": "software-engineer",
+        "definitionOfReady": [
+          "Technical breakdown approved"
+        ],
+        "definitionOfDone": [
+          "Pull request and tests are ready for QA"
+        ],
+        "acceptanceCriteria": [
+          "Required user journey passes"
+        ],
+        "milestoneKey": "launch",
+        "estimate": 5,
+        "resourceKeys": [
+          "product.prd"
+        ],
+        "relations": {
+          "blockedByKeys": [],
+          "relatedToKeys": []
+        },
+        "prioritySource": "explicit"
+      },
+      {
+        "key": "product.analytics-decision",
+        "repository": "example-org/product",
+        "type": "decision",
+        "parentKey": "product.launch",
+        "title": "Approve analytics event names",
+        "outcome": "Names cover the launch funnel",
+        "deliverable": "One event contract is approved",
+        "delivery": {
+          "mode": "decision",
+          "ownerRole": "cpo",
+          "verification": [
+            {
+              "mode": "decision",
+              "check": "Decision is recorded in the PRD"
+            }
+          ]
+        },
+        "status": "Refinement",
+        "ownerRole": "cpo",
+        "definitionOfReady": [
+          "Candidate event names documented"
+        ],
+        "definitionOfDone": [
+          "One event contract is approved"
+        ],
+        "acceptanceCriteria": [
+          "Names cover the launch funnel"
+        ],
+        "resourceKeys": [],
+        "relations": {
+          "blockedByKeys": [],
+          "relatedToKeys": [
+            "product.implementation"
+          ]
+        }
+      }
+    ],
+    "sourceOutcomeKey": "product.launch"
+  },
+  "diagnostics": {
+    "warnings": [
+      "legacy section setup is operational configuration and was not carried into the v4 contract",
+      "legacy section estimation is operational configuration and was not carried into the v4 contract",
+      "legacy section views is operational configuration and was not carried into the v4 contract",
+      "legacy section coverage is operational configuration and was not carried into the v4 contract"
+    ],
+    "decisions": [
+      {
+        "code": "missing-priority",
+        "path": "issues[2].priority",
+        "message": "Resolve legacy priority without silently defaulting it."
+      }
+    ]
+  },
+  "eligibleForApply": false
+}

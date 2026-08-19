@@ -6,16 +6,17 @@ import { validateHandoff, validateWorkPlan } from "./lib.mjs";
 
 export function migrateWorkPlan(input, { targetVersion = 4 } = {}) {
   if (targetVersion !== 4) throw new Error("only work plan targetVersion 4 is supported");
-  if (input?.kind !== "linear-role-work-plan") throw new Error("input is not a Linear RoleFlow work plan");
-  if (![1, 2, 3, 4].includes(input.schemaVersion)) throw new Error(`unsupported work plan schemaVersion ${input.schemaVersion}`);
+  if (input?.kind !== "github-role-work-plan" && !(input?.kind === undefined && [1, 2].includes(input?.schemaVersion))) throw new Error("input is not a GitHub RoleFlow work plan");
+  if (![1, 2, 4].includes(input.schemaVersion)) throw new Error(`unsupported work plan schemaVersion ${input.schemaVersion}`);
 
   const sourceVersion = input.schemaVersion;
   const legacyDecisions = sourceVersion < 4 ? diagnoseLegacyTerminalBoundaries(input) : [];
-  const artifact = sourceVersion === 1 ? migrateWorkPlanV1(input) : structuredClone(input);
+  const artifact = sourceVersion < 4 ? migrateLegacyWorkPlan(input) : structuredClone(input);
   artifact.schemaVersion = 4;
 
+  const legacyWarnings = sourceVersion < 4 ? collectDroppedSections(input) : [];
   if (sourceVersion < 4) {
-    if (sourceVersion >= 2) inferPlanningStage(artifact);
+    inferPlanningStage(artifact);
     for (const issue of artifact.issues ?? []) {
       if (issue.priority !== undefined && issue.priority !== "none" && issue.prioritySource === undefined) issue.prioritySource = "explicit";
       if (Array.isArray(issue.delivery?.verification)) {
@@ -32,6 +33,7 @@ export function migrateWorkPlan(input, { targetVersion = 4 } = {}) {
   }
 
   const diagnostics = diagnoseWorkPlan(artifact, { sourceVersion });
+  diagnostics.warnings = [...legacyWarnings, ...diagnostics.warnings];
   diagnostics.decisions = dedupeDecisions([...legacyDecisions, ...diagnostics.decisions]);
   const eligibleForApply = diagnostics.decisions.length === 0 && validateWorkPlan(artifact, { roles: null }).length === 0;
   return { artifact, diagnostics, eligibleForApply };
@@ -39,7 +41,7 @@ export function migrateWorkPlan(input, { targetVersion = 4 } = {}) {
 
 export function migrateHandoff(input, { targetVersion = 2 } = {}) {
   if (targetVersion !== 2) throw new Error("only handoff targetVersion 2 is supported");
-  if (input?.kind !== "linear-role-handoff") throw new Error("input is not a Linear RoleFlow handoff");
+  if (input?.kind !== "github-role-handoff" && !(input?.kind === undefined && input?.schemaVersion === 1)) throw new Error("input is not a GitHub RoleFlow handoff");
   if (![1, 2].includes(input.schemaVersion)) throw new Error(`unsupported handoff schemaVersion ${input.schemaVersion}`);
 
   const artifact = input.schemaVersion === 2 ? structuredClone(input) : migrateHandoffV1(input);
@@ -49,6 +51,9 @@ export function migrateHandoff(input, { targetVersion = 2 } = {}) {
   }
   if (!Array.isArray(artifact.delivery?.checks) || artifact.delivery.checks.length === 0) {
     decisions.push(decision("missing-delivery-checks", "delivery.checks", "Define typed terminal delivery checks."));
+  }
+  if (artifact.type === "review" && artifact.review?.decision === "passed" && !artifact.review?.independence) {
+    decisions.push(decision("missing-review-independence", "review.independence", "Record fresh-session, fresh-subagent, or external-reviewer for the passed review."));
   }
   const diagnostics = { warnings: [], decisions };
   const eligibleForApply = decisions.length === 0 && validateHandoff(artifact, { roles: null }).length === 0;
@@ -147,7 +152,7 @@ export function validateMigrationPlan(plan) {
   if (plan.kind !== "roleflow-contract-migration-plan") errors.push("kind is invalid");
   if (!new Set(["preview", "apply"]).has(plan.mode)) errors.push("mode is invalid");
   if (!/^migration-[a-f0-9]{16}$/u.test(plan.planId ?? "")) errors.push("planId is invalid");
-  if (!new Set(["linear-role-work-plan", "linear-role-handoff"]).has(plan.artifactKind)) errors.push("artifactKind is invalid");
+  if (!new Set(["github-role-work-plan", "github-role-handoff"]).has(plan.artifactKind)) errors.push("artifactKind is invalid");
   if (!isAbsolute(plan.sourcePath ?? "")) errors.push("sourcePath must be absolute");
   if (!isAbsolute(plan.outputPath ?? "")) errors.push("outputPath must be absolute");
   for (const key of ["sourceHash", "beforeHash", "afterHash"]) {
@@ -181,31 +186,67 @@ export function validateMigrationPlan(plan) {
   return errors;
 }
 
-function migrateWorkPlanV1(input) {
+function migrateLegacyWorkPlan(input) {
   return {
     schemaVersion: 4,
-    kind: input.kind,
+    kind: "github-role-work-plan",
     mode: input.mode,
     planningStage: "goal-structure",
-    summary: input.summary,
+    summary: input.summary ?? "Migrated legacy GitHub work plan.",
     project: {
-      id: input.projectId,
-      teamIds: [input.teamId],
+      owner: input.project?.owner,
+      number: input.project?.number,
+      ...(input.project?.lifecycle ? { lifecycle: structuredClone(input.project.lifecycle) } : {}),
     },
-    initiatives: [],
-    milestones: [],
-    resources: structuredClone(input.resources ?? []),
-    issues: (input.issues ?? []).map((issue) => {
-      const migrated = structuredClone(issue);
-      if (migrated.type === "initiative") migrated.type = "outcome";
-      migrated.relations = {
-        blockedByKeys: structuredClone(migrated.blockedByKeys ?? []),
-        relatedToKeys: [],
-      };
-      delete migrated.blockedByKeys;
-      return migrated;
-    }),
+    phases: [],
+    milestones: (input.milestones ?? []).map((milestone) => ({
+      key: milestone.key,
+      repository: milestone.repository,
+      name: milestone.title ?? milestone.name,
+      ...(milestone.dueOn ? { targetDate: milestone.dueOn } : {}),
+    })),
+    resources: (input.resources ?? []).map((resource) => ({
+      key: resource.key,
+      title: resource.title,
+      type: "url",
+      url: resource.url,
+    })),
+    issues: (input.issues ?? []).map((issue) => ({
+      key: issue.key,
+      repository: issue.repository,
+      type: issue.kind,
+      ...(issue.parentKey ? { parentKey: issue.parentKey } : {}),
+      title: issue.title,
+      outcome: issue.outcome ?? (issue.acceptanceCriteria ?? issue.dod ?? [])[0] ?? issue.title,
+      deliverable: issue.deliverable ?? (issue.dod ?? [])[0] ?? issue.title,
+      ...(issue.delivery ? {
+        delivery: issue.kind === "decision"
+          // Gen-1 had no decision delivery mode; the issue type itself is the
+          // certain signal, so the mode maps without text inference.
+          ? { ...structuredClone(issue.delivery), mode: "decision" }
+          : structuredClone(issue.delivery),
+      } : {}),
+      status: issue.status,
+      ...(Object.hasOwn(issue, "priority") ? { priority: issue.priority } : {}),
+      ownerRole: issue.role,
+      definitionOfReady: structuredClone(issue.dor ?? []),
+      definitionOfDone: structuredClone(issue.dod ?? []),
+      ...(issue.acceptanceCriteria ? { acceptanceCriteria: structuredClone(issue.acceptanceCriteria) } : {}),
+      ...(issue.milestoneKey ? { milestoneKey: issue.milestoneKey } : {}),
+      ...(issue.estimate !== undefined ? { estimate: issue.estimate } : {}),
+      resourceKeys: structuredClone(issue.resourceKeys ?? []),
+      relations: {
+        blockedByKeys: structuredClone(issue.blockedByKeys ?? []),
+        relatedToKeys: structuredClone(issue.relatedKeys ?? []),
+      },
+    })),
   };
+}
+
+function collectDroppedSections(input) {
+  return ["setup", "estimation", "views", "coverage"]
+    .filter((section) => input?.[section] !== undefined)
+    .map((section) => `legacy section ${section} is operational configuration and was not carried into the v4 contract`);
 }
 
 function inferPlanningStage(artifact) {
@@ -228,9 +269,6 @@ function inferPlanningStage(artifact) {
 
 function diagnoseWorkPlan(artifact, { sourceVersion }) {
   const decisions = [];
-  if (!artifact.project?.projectStatus) {
-    decisions.push(decision("missing-project-status", "project.projectStatus", "Resolve the live Linear Project status before apply."));
-  }
   if (!new Set(["goal-structure", "outcome-decomposition"]).has(artifact.planningStage)) {
     decisions.push(decision("planning-stage", "planningStage", "Choose goal-structure or one unambiguous source outcome for decomposition."));
   }
@@ -285,45 +323,58 @@ function diagnoseLegacyTerminalBoundaries(input) {
   return decisions;
 }
 
+const LEGACY_OUTCOME_EVENTS = {
+  "handoff": { type: "handoff" },
+  "review-passed": { type: "review", review: { decision: "passed", findings: [] } },
+  "changes-requested": { type: "review", review: { decision: "changes-requested", findings: [] } },
+  "blocked": { type: "blocked" },
+  "delivered": { type: "delivery" },
+  "verification-passed": { type: "verification", verification: { decision: "passed" } },
+};
+const LEGACY_PHASES = { "artifact-review": "review", "ready-to-deliver": "ready-to-deliver", "delivery-verification": "delivery-verification", terminal: "complete" };
+const LEGACY_FROM_BY_TYPE = { handoff: "in-progress", review: "in-review", delivery: "ready-to-deliver", verification: "delivery-verification", blocked: "in-progress" };
+
+function statusToLogical(status) {
+  const token = String(status ?? "").trim().toLowerCase().replace(/\s+/gu, "-");
+  return ({
+    refinement: "refinement", ready: "ready", "in-progress": "in-progress", "in-review": "in-review",
+    "ready-to-deliver": "ready-to-deliver", "delivery-verification": "delivery-verification",
+    blocked: "blocked", done: "done", canceled: "canceled", cancelled: "canceled",
+  })[token];
+}
+
 function migrateHandoffV1(input) {
-  const delivery = input.delivery ? {
-    mode: input.delivery.mode,
-    ownerRole: input.fromRole,
-    phase: input.delivery.phase,
-    ...(input.delivery.target ? { target: input.delivery.target } : {}),
-    checks: [],
-  } : undefined;
+  const event = LEGACY_OUTCOME_EVENTS[input.outcome] ?? { type: "handoff" };
+  const to = statusToLogical(input.next?.status);
   return {
     schemaVersion: 2,
-    kind: input.kind,
-    type: input.type,
-    issueId: input.issueId,
+    kind: "github-role-handoff",
+    type: event.type,
+    issueId: input.issue,
     fromRole: input.fromRole,
     ...(input.toRole ? { toRole: input.toRole } : {}),
     summary: input.summary,
-    transition: inferHandoffTransition(input),
+    ...(to ? { transition: { from: LEGACY_FROM_BY_TYPE[event.type], to } } : {}),
     ...(input.deliverables ? { deliverables: structuredClone(input.deliverables) } : {}),
-    checks: structuredClone(input.checks ?? []),
+    checks: (input.dod ?? []).map((check) => ({ item: check.label, passed: check.passed === true })),
     evidence: (input.evidence ?? []).map(migrateEvidence),
-    ...(input.knownLimitations ? { knownLimitations: structuredClone(input.knownLimitations) } : {}),
-    ...(delivery ? { delivery } : {}),
-    ...(input.review ? { review: structuredClone(input.review) } : {}),
-    ...(input.blocker ? { blocker: structuredClone(input.blocker) } : {}),
-    ...(input.software ? { software: structuredClone(input.software) } : {}),
-    nextAction: input.nextAction,
+    ...(input.limitations ? { knownLimitations: structuredClone(input.limitations) } : {}),
+    ...(input.delivery ? {
+      delivery: {
+        mode: input.delivery.mode,
+        ownerRole: input.fromRole,
+        phase: LEGACY_PHASES[input.delivery.phase] ?? input.delivery.phase,
+        checks: [],
+      },
+    } : {}),
+    ...(event.review ? { review: structuredClone(event.review) } : {}),
+    ...(event.verification ? { verification: structuredClone(event.verification) } : {}),
+    nextAction: input.next?.action ?? "Review the migrated handoff before any mutation.",
   };
 }
 
-function inferHandoffTransition(input) {
-  if (input.type === "handoff") return { from: "in-progress", to: "in-review" };
-  if (input.type === "review" && input.review?.decision === "changes-requested") return { from: "in-review", to: "ready" };
-  if (input.type === "blocked") return { from: "in-progress", to: "blocked" };
-  return undefined;
-}
-
 function migrateEvidence(item) {
-  const value = item?.value ?? "";
-  if (/^Linear resource:/u.test(value)) return { kind: "linear-resource", label: item.label, value, visibility: "shared" };
+  const value = item?.url ?? item?.value ?? "";
   if (/^https?:\/\//u.test(value)) return { kind: "url", label: item.label, value, visibility: "shared" };
   if (/^(?:file:|\/|[A-Za-z]:\\|\.{0,2}\/)/u.test(value)) return { kind: "local-file", label: item.label, value, visibility: "local" };
   return { kind: "text", label: item.label, value, visibility: "shared" };

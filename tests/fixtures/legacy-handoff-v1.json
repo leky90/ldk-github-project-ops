@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "kind": "github-role-handoff",
+  "outcome": "review-passed",
+  "issue": "example-org/product#42",
+  "fromRole": "qa",
+  "toRole": "software-engineer",
+  "summary": "Implementation satisfies the reviewed acceptance criteria.",
+  "deliverables": [
+    "Reviewed implementation"
+  ],
+  "dod": [
+    {
+      "label": "Acceptance scenarios pass",
+      "passed": true
+    }
+  ],
+  "evidence": [
+    {
+      "label": "Reviewed pull request",
+      "url": "https://github.com/example-org/product/pull/55"
+    }
+  ],
+  "next": {
+    "status": "Ready to Deliver",
+    "action": "Merge the reviewed pull request.",
+    "role": "software-engineer"
+  },
+  "delivery": {
+    "mode": "software-merge",
+    "phase": "ready-to-deliver"
+  }
+}

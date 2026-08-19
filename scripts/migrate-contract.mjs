@@ -54,13 +54,13 @@ async function apply(inputArgumentValue, commandFlags) {
   if (plan.outputPath !== outputPath) throw new Error("migration plan outputPath does not match output");
   if (hashBytes(inputBytes) !== plan.sourceHash) throw new Error("migration source changed after preview");
   if (!plan.eligibleForApply || plan.diagnostics?.decisions?.length > 0) throw new Error("migration has unresolved decisions and is not eligible for apply");
-  const validationErrors = plan.artifactKind === "linear-role-work-plan"
+  const validationErrors = plan.artifactKind === "github-role-work-plan"
     ? validateWorkPlan(plan.afterArtifact, { roles: null })
     : validateHandoff(plan.afterArtifact, { roles: null });
   if (validationErrors.length) throw new Error(`target artifact is invalid: ${validationErrors.join("; ")}`);
 
   const appliedPlan = { ...plan, mode: "apply" };
-  const snapshotPath = await writeMigrationSnapshot(appliedPlan, { directory: join(dirname(sourcePath), ".linear-ops", "migrations") });
+  const snapshotPath = await writeMigrationSnapshot(appliedPlan, { directory: join(dirname(sourcePath), ".github-ops", "migrations") });
   await atomicCreateJson(outputPath, plan.afterArtifact);
   await updateOperationJournal(snapshotPath, "applied");
   await atomicWriteJson(planPath, appliedPlan);
@@ -82,14 +82,18 @@ async function rollbackApply(commandFlags) {
   const plan = await readJson(resolve(commandFlags.get("plan")));
   assertValidPlan(plan);
   const result = await restoreMigrationArtifact(plan);
-  const snapshotPath = join(dirname(plan.sourcePath), ".linear-ops", "migrations", plan.planId, "migration-plan.json");
+  const snapshotPath = join(dirname(plan.sourcePath), ".github-ops", "migrations", plan.planId, "migration-plan.json");
   await updateOperationJournal(snapshotPath, "rolled-back");
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
 function migrate(input) {
-  if (input?.kind === "linear-role-work-plan") return migrateWorkPlan(input);
-  if (input?.kind === "linear-role-handoff") return migrateHandoff(input);
+  if (input?.kind === "github-role-work-plan") return migrateWorkPlan(input);
+  if (input?.kind === "github-role-handoff") return migrateHandoff(input);
+  // Gen-1 GitHub artifacts carried no kind field: work plans have issues,
+  // handoffs have an outcome.
+  if (input?.kind === undefined && [1, 2].includes(input?.schemaVersion) && Array.isArray(input?.issues)) return migrateWorkPlan(input);
+  if (input?.kind === undefined && input?.schemaVersion === 1 && typeof input?.outcome === "string") return migrateHandoff(input);
   throw new Error("input kind is not a supported RoleFlow contract");
 }
 
