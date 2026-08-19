@@ -1,19 +1,27 @@
 #!/usr/bin/env node
-import { readJson, validateProjectBinding, validateWorkPlan } from "./lib.mjs";
+import { parseCli, readJson, validateProjectBinding, validateWorkPlan } from "./lib.mjs";
 
-const args = process.argv.slice(2);
-const apply = args.includes("--apply");
-const files = args.filter((arg) => arg !== "--apply");
-if (files.length < 1 || files.length > 2) {
-  process.stderr.write("Usage: validate-work-plan.mjs [--apply] <plan.json> [binding.json]\n");
+const { positional, flags } = parseCli(process.argv.slice(2));
+if (positional.length !== 1) {
+  process.stderr.write("Usage: validate-work-plan.mjs <plan.json> [--binding <binding.json>] [--apply]\n");
   process.exit(2);
 }
 try {
-  const plan = await readJson(files[0]);
-  const binding = files[1] ? await readJson(files[1]) : undefined;
-  const errors = [...(binding ? validateProjectBinding(binding) : []), ...validateWorkPlan(plan, { binding, forApply: apply })];
-  if (errors.length) throw new Error(errors.join("\n"));
-  process.stdout.write(`Work plan is valid for ${apply ? "apply" : "preview"}.\n`);
+  const plan = await readJson(positional[0]);
+  const binding = flags.binding ? await readJson(flags.binding) : undefined;
+  const bindingErrors = binding ? validateProjectBinding(binding).map((error) => `binding: ${error}`) : [];
+  const errors = [
+    ...bindingErrors,
+    ...validateWorkPlan(plan, {
+      owner: binding?.github?.owner,
+      projectNumber: binding?.github?.projectNumber,
+      repositories: binding?.github?.repositories,
+      binding,
+      forApply: Boolean(flags.apply),
+    }),
+  ];
+  process.stdout.write(`${JSON.stringify({ valid: errors.length === 0, errors: [...new Set(errors)] }, null, 2)}\n`);
+  if (errors.length) process.exitCode = 1;
 } catch (error) {
   process.stderr.write(`${error.message}\n`);
   process.exitCode = 2;

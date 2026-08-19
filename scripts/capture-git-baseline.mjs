@@ -1,16 +1,43 @@
 #!/usr/bin/env node
-import { writeFile } from "node:fs/promises";
-import { captureGitBaseline } from "./git-delivery-state.mjs";
+import { access, mkdir, rename, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 
-if (process.argv.length !== 5) {
-  process.stderr.write("Usage: capture-git-baseline.mjs <worktree> <owner/repo#issue> <output.json>\n");
+import { captureGitBaseline, validateBaselineOutputPath } from "./git-delivery-state.mjs";
+import { parseCli } from "./lib.mjs";
+
+const { positional, flags } = parseCli(process.argv.slice(2));
+if (positional.length !== 1 || typeof flags.get("issue") !== "string") {
+  process.stderr.write("Usage: capture-git-baseline.mjs <output.json> --issue <issue-id> [--repository <path>] [--allow-clean-primary]\n");
   process.exit(2);
 }
+
 try {
-  const baseline = await captureGitBaseline(process.argv[2], process.argv[3]);
-  await writeFile(process.argv[4], `${JSON.stringify(baseline, null, 2)}\n`, { flag: "wx", mode: 0o600 });
-  process.stdout.write(`${process.argv[4]}\n`);
+  const output = positional[0];
+  await access(output).then(
+    () => { throw new Error("baseline output already exists; reuse it instead of replacing it"); },
+    (error) => { if (error.code !== "ENOENT") throw error; },
+  );
+  const repository = typeof flags.get("repository") === "string" ? flags.get("repository") : ".";
+  await validateBaselineOutputPath({ repository, output });
+  const baseline = await captureGitBaseline({
+    repository,
+    issueId: flags.get("issue"),
+    worktreeIsolation: flags.has("allow-clean-primary") ? "allow-clean-primary" : "required",
+  });
+  await mkdir(dirname(output), { recursive: true });
+  const temporary = `${output}.${process.pid}.tmp`;
+  await writeFile(temporary, `${JSON.stringify(baseline, null, 2)}\n`, { mode: 0o600 });
+  await rename(temporary, output);
+  process.stdout.write(`${JSON.stringify({
+    valid: true,
+    baselineId: baseline.baselineId,
+    issueId: baseline.issueId,
+    branchName: baseline.branchName,
+    baselineCommit: baseline.baselineCommit,
+    worktreeMode: baseline.worktreeMode,
+    output,
+  }, null, 2)}\n`);
 } catch (error) {
   process.stderr.write(`${error.message}\n`);
-  process.exitCode = 2;
+  process.exitCode = 1;
 }

@@ -1,0 +1,372 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ldktech.dev/schemas/linear-role-work-plan-v4.schema.json",
+  "title": "Linear RoleFlow Work Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "mode", "planningStage", "project", "summary", "initiatives", "milestones", "resources", "issues"],
+  "properties": {
+    "schemaVersion": { "const": 4 },
+    "kind": { "const": "linear-role-work-plan" },
+    "mode": { "enum": ["preview", "apply"] },
+    "planningStage": { "enum": ["goal-structure", "outcome-decomposition"] },
+    "sourceOutcomeKey": { "$ref": "#/$defs/key" },
+    "summary": { "type": "string", "minLength": 1 },
+    "project": { "$ref": "#/$defs/project" },
+    "initiatives": { "type": "array", "items": { "$ref": "#/$defs/initiative" } },
+    "phases": { "type": "array", "items": { "$ref": "#/$defs/phase" } },
+    "milestones": { "type": "array", "items": { "$ref": "#/$defs/milestone" } },
+    "resources": { "type": "array", "items": { "$ref": "#/$defs/resource" } },
+    "issues": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/issue" } }
+  },
+  "$defs": {
+    "key": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._:-]{2,95}$" },
+    "role": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "date": { "type": "string", "format": "date" },
+    "priority": { "enum": ["urgent", "high", "normal", "low"] },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "teamIds"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "teamIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "name": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string" },
+        "description": { "type": "string" },
+        "status": {
+          "description": "Legacy read-compatible status name. New plans use projectStatus with a live Linear status ID.",
+          "enum": ["backlog", "planned", "started", "in-progress", "paused", "completed", "canceled"]
+        },
+        "projectStatus": { "$ref": "#/$defs/projectStatus" },
+        "lifecycle": { "$ref": "#/$defs/projectLifecycle" },
+        "priority": { "$ref": "#/$defs/priority" },
+        "leadId": { "type": "string", "minLength": 1 },
+        "memberIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "startDate": { "$ref": "#/$defs/date" },
+        "targetDate": { "$ref": "#/$defs/date" },
+        "initiativeKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } }
+      }
+    },
+    "projectStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "category"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "category": { "enum": ["backlog", "planned", "in-progress", "completed", "canceled"] }
+      }
+    },
+    "projectLifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "completionCriteria"],
+      "properties": {
+        "mode": { "enum": ["bounded", "continuous"] },
+        "completionCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "initiative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "objective", "status", "priority", "resourceKeys"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "linearId": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "objective": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "status": { "enum": ["proposed", "planned", "active", "completed", "canceled"] },
+        "priority": { "$ref": "#/$defs/priority" },
+        "ownerId": { "type": "string", "minLength": 1 },
+        "targetDate": { "$ref": "#/$defs/date" },
+        "labels": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "resourceKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } }
+      }
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "order", "objective", "entryCriteria", "exitCriteria", "milestoneKeys"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "order": { "type": "integer", "minimum": 1 },
+        "objective": { "type": "string", "minLength": 1 },
+        "entryCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "exitCriteria": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "milestoneKeys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        }
+      }
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "linearId": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "targetDate": { "$ref": "#/$defs/date" }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "title", "type"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "title": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["document", "url", "repository", "reference"] },
+        "url": { "type": "string", "minLength": 1 },
+        "content": { "type": "string", "minLength": 1 }
+      }
+    },
+    "relations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blockedByKeys", "relatedToKeys"],
+      "properties": {
+        "blockedByKeys": {
+          "description": "Canonical incoming dependencies. Apply with Linear blockedBy; the inverse blocks relation is derived.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        },
+        "relatedToKeys": {
+          "description": "Symmetric issue relations. Apply with Linear relatedTo; there is no relatedBy field.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/key" }
+        },
+        "duplicateOfKey": {
+          "description": "Canonical issue this issue duplicates. Apply with Linear duplicateOf.",
+          "$ref": "#/$defs/key"
+        }
+      }
+    },
+    "externalBlocker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "ownerRole", "resumeWhen"],
+      "properties": {
+        "reason": { "type": "string", "minLength": 1 },
+        "ownerRole": { "$ref": "#/$defs/role" },
+        "resumeWhen": { "type": "string", "minLength": 1 }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "ownerRole", "verification"],
+      "properties": {
+        "mode": {
+          "enum": [
+            "decision",
+            "artifact-review",
+            "publish",
+            "external-action",
+            "software-merge",
+            "production-release",
+            "operations-change"
+          ]
+        },
+        "ownerRole": { "$ref": "#/$defs/role" },
+        "target": { "type": "string", "minLength": 1 },
+        "verification": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["mode", "check"],
+            "properties": {
+              "mode": {
+                "enum": [
+                  "decision",
+                  "artifact-review",
+                  "publish",
+                  "external-action",
+                  "software-merge",
+                  "production-release",
+                  "operations-change"
+                ]
+              },
+              "check": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "mode": { "const": "decision" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "decision" } } } } } } },
+        { "if": { "properties": { "mode": { "const": "artifact-review" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "artifact-review" } } } } } } },
+        { "if": { "properties": { "mode": { "const": "publish" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "publish" } } } } } } },
+        { "if": { "properties": { "mode": { "const": "external-action" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "external-action" } } } } } } },
+        { "if": { "properties": { "mode": { "const": "software-merge" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "software-merge" } } } } } } },
+        { "if": { "properties": { "mode": { "const": "production-release" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "production-release" } } } } } } },
+        { "if": { "properties": { "mode": { "const": "operations-change" } } }, "then": { "properties": { "verification": { "items": { "properties": { "mode": { "const": "operations-change" } } } } } } }
+      ]
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "type", "title", "outcome", "deliverable", "delivery", "status", "priority", "prioritySource", "ownerRole", "definitionOfReady", "definitionOfDone", "resourceKeys", "relations"],
+      "properties": {
+        "key": { "$ref": "#/$defs/key" },
+        "linearId": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["outcome", "task", "decision"] },
+        "parentKey": { "$ref": "#/$defs/key" },
+        "title": { "type": "string", "minLength": 1 },
+        "outcome": { "type": "string", "minLength": 1 },
+        "context": { "type": "string" },
+        "deliverable": { "type": "string", "minLength": 1 },
+        "delivery": { "$ref": "#/$defs/delivery" },
+        "status": { "enum": ["Refinement", "Ready", "Blocked"] },
+        "priority": { "$ref": "#/$defs/priority" },
+        "prioritySource": { "enum": ["explicit", "inherited", "policy-default"] },
+        "ownerRole": { "$ref": "#/$defs/role" },
+        "reviewerRole": { "$ref": "#/$defs/role" },
+        "assigneeId": { "type": "string", "minLength": 1 },
+        "phaseKey": { "$ref": "#/$defs/key" },
+        "milestoneKey": { "$ref": "#/$defs/key" },
+        "cycleId": { "type": "string", "minLength": 1 },
+        "estimate": { "type": "number", "minimum": 0 },
+        "dueDate": { "$ref": "#/$defs/date" },
+        "labels": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "definitionOfReady": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "definitionOfDone": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "resourceKeys": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/key" } },
+        "externalBlocker": { "$ref": "#/$defs/externalBlocker" },
+        "relations": { "$ref": "#/$defs/relations" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["prioritySource"],
+            "properties": { "prioritySource": { "const": "policy-default" } }
+          },
+          "then": {
+            "properties": { "priority": { "const": "normal" } }
+          }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "task" } }
+          },
+          "then": { "required": ["parentKey"] }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "outcome" } }
+          },
+          "then": { "not": { "required": ["parentKey"] } }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "decision" } }
+          },
+          "then": {
+            "properties": {
+              "delivery": {
+                "properties": { "mode": { "const": "decision" } }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["status"],
+            "properties": { "status": { "const": "Ready" } }
+          },
+          "then": {
+            "not": { "required": ["externalBlocker"] },
+            "properties": {
+              "relations": {
+                "properties": { "blockedByKeys": { "maxItems": 0 } }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": ["status"],
+            "properties": { "status": { "const": "Blocked" } }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "properties": {
+                  "relations": {
+                    "properties": { "blockedByKeys": { "minItems": 1 } }
+                  }
+                }
+              },
+              { "required": ["externalBlocker"] }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": ["mode"],
+        "properties": { "mode": { "const": "apply" } }
+      },
+      "then": {
+        "properties": {
+          "project": { "required": ["projectStatus"] }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["planningStage"],
+        "properties": { "planningStage": { "const": "goal-structure" } }
+      },
+      "then": {
+        "properties": {
+          "issues": {
+            "items": {
+              "not": {
+                "required": ["type"],
+                "properties": { "type": { "const": "task" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["planningStage"],
+        "properties": { "planningStage": { "const": "outcome-decomposition" } }
+      },
+      "then": { "required": ["sourceOutcomeKey"] }
+    }
+  ]
+}
