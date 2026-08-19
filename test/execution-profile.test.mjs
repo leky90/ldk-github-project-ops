@@ -185,6 +185,14 @@ test("v2 rendering includes only supported shared evidence", async () => {
   assert.doesNotMatch(comment, /private reviewer reasoning|observedAt|issueUpdatedAt|new-preferred|standard|medium/u);
 });
 
+test("render-work-comment CLI renders with a binding instead of crashing", async () => {
+  const cli = join(root, "scripts", "render-work-comment.mjs");
+  const handoffPath = join(root, "tests", "fixtures", "valid-handoff-v2.json");
+  const bindingPath = join(root, "tests", "fixtures", "valid-project-binding.json");
+  const { stdout } = await execFileAsync(process.execPath, [cli, handoffPath, "--binding", bindingPath]);
+  assert.match(stdout, /Accepted launch package/u);
+});
+
 test("embedded local links never validate or render as shared evidence", async () => {
   const handoff = await validHandoff();
   handoff.evidence[0].value = "Private [report](file:///Users/example/private/report.json)";

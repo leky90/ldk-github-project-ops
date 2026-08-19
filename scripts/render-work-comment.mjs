@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { pathToFileURL } from "node:url";
-import { parseCli, readJson, renderWorkComment, validateProjectBinding } from "./lib.mjs";
+import { parseCli, readJson, renderWorkComment, resolveBindingRoles, validateProjectBinding } from "./lib.mjs";
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { positional, flags } = parseCli(process.argv.slice(2));
