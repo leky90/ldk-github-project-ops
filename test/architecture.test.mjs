@@ -11,7 +11,7 @@ test("package exposes the same v0.2.0 plugin for Codex and Claude Code", async (
   const claude = JSON.parse(await readFile(join(root, ".claude-plugin", "plugin.json"), "utf8"));
   const marketplace = JSON.parse(await readFile(join(root, ".claude-plugin", "marketplace.json"), "utf8"));
   const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
-  assert.equal(packageJson.version, "0.2.0");
+  assert.equal(packageJson.version, "2.0.0");
   assert.equal(codex.name, "ldk-github-project-ops");
   assert.equal(codex.version.split("+")[0], packageJson.version);
   assert.equal(claude.version, packageJson.version);
