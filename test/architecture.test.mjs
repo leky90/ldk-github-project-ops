@@ -57,7 +57,7 @@ test("source has deterministic workflow assets and no daemon or database", async
 
 test("source contains no credential-like values", async () => {
   for (const path of await listFiles(root)) {
-    if (path.startsWith(".git/") || path.startsWith(".codegraph/")) continue;
+    if (path.startsWith(".git/") || path.startsWith(".codegraph/") || path.startsWith("node_modules/") || path.startsWith(".github-ops/")) continue;
     const data = await readFile(join(root, path));
     if (data.includes(0)) continue;
     const text = data.toString("utf8");
@@ -69,8 +69,12 @@ async function listFiles(directory, prefix = "") {
   const output = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = prefix ? `${prefix}/${entry.name}` : entry.name;
-    if (entry.isDirectory()) output.push(...await listFiles(join(directory, entry.name), path));
-    else output.push(path);
+    if (entry.isSymbolicLink()) continue;
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name === ".git") continue;
+      output.push(...await listFiles(join(directory, entry.name), path));
+    }
+    else if (entry.isFile()) output.push(path);
   }
   return output;
 }

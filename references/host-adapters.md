@@ -39,3 +39,18 @@ write as proof that the underlying Issue was closed or the PR merged.
 Local locks and baselines live under ignored `.github-ops/`. Hosts on different
 machines do not share them. GitHub assignee plus item status is the cross-machine
 human coordination signal; it is not a strict distributed mutex.
+
+## Tool classification
+
+Classify tool operations with `scripts/github-tool-mapping.mjs` by their
+normalized verb; unknown GitHub operations are capability warnings and must not
+be guessed as reads or writes. Hosts register the GitHub server under different
+names — `github`, `gh`, or an opaque connector id — so classification keys on
+the operation name (`create_issue`, `merge_pull_request`, …), not on the server
+segment. A tool from an unrecognized server whose operation matches the GitHub
+catalog is treated as GitHub. Projects v2 GraphQL mutations issued through the
+`gh` CLI run outside MCP classification; the skill's pre/post-mutation
+discipline applies to them directly.
+
+Map logical states to bound Projects v2 status option ids with
+`mapStatusOption(binding, logicalState)`; never write a status by display name.
