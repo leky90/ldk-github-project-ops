@@ -143,3 +143,26 @@ test("lifecycle analysis follows the logical axis of the same report", async () 
   assert.match(report, /0\/4 items Done \(0%\)/u);
   assert.doesNotMatch(report, /Consistency: \*\*Nhất quán\*\*/u, "board-Done with open content must not read as a consistent closed project");
 });
+
+test("a published COMPLETE update is not re-recommended for a drained bounded Project", async () => {
+  const { analyzeProjectLifecycle } = await import("../scripts/project-lifecycle.mjs");
+  const base = {
+    project: {
+      id: "PVT_x", title: "Canary", state: "open",
+      lifecycle: { mode: "bounded", completionCriteria: ["All outcomes verified"] },
+    },
+    items: [
+      { key: "octo-org/product#1", type: "issue", status: "Done", contentState: "CLOSED" },
+      { key: "octo-org/product#2", type: "issue", status: "Done", contentState: "CLOSED" },
+    ],
+  };
+  const before = analyzeProjectLifecycle(base);
+  assert.equal(before.code, "bounded-needs-completion-decision", "without a COMPLETE update the completion decision is still owed");
+
+  const after = analyzeProjectLifecycle({
+    ...base,
+    project: { ...base.project, latestStatusUpdate: { status: "COMPLETE", createdAt: "2026-08-19T08:00:00Z" } },
+  });
+  assert.equal(after.code, "complete-update-project-open", "once COMPLETE is published the report must not re-demand it");
+  assert.notEqual(after.consistency, "mismatch");
+});

@@ -59,6 +59,11 @@ export function analyzeProjectLifecycle(snapshot) {
     return { code: "inactive-with-active-work", consistency: "mismatch", ...base, message: `Project đang INACTIVE nhưng có ${activeItems.length} item đang thực thi hoặc delivery.`, requiresDecision: true, recommendedAction: "Decide whether to resume the Project or stop the active work." };
   }
   if (lifecycle.state === "open" && openItems.length === 0) {
+    // A published COMPLETE update already answers the completion decision, so
+    // it must be recognized before re-demanding one.
+    if (lifecycle.health === "COMPLETE") {
+      return { code: "complete-update-project-open", consistency: "advisory", ...base, message: "Latest update là COMPLETE nhưng Project vẫn open.", requiresDecision: true, recommendedAction: "Confirm whether the Project should remain open for another outcome or be explicitly closed." };
+    }
     if (lifecycle.lifecycleMode === "continuous") {
       return { code: "continuous-needs-outcome", consistency: "advisory", ...base, message: "Continuous Project đang không có outcome mở; giữ Project open và yêu cầu outcome tiếp theo.", requiresDecision: true, recommendedAction: "CPO defines the next outcome or milestone; do not auto-close or publish COMPLETE." };
     }
