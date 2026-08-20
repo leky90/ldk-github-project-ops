@@ -11,7 +11,7 @@ test("package exposes the same v0.2.0 plugin for Codex and Claude Code", async (
   const claude = JSON.parse(await readFile(join(root, ".claude-plugin", "plugin.json"), "utf8"));
   const marketplace = JSON.parse(await readFile(join(root, ".claude-plugin", "marketplace.json"), "utf8"));
   const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
-  assert.equal(packageJson.version, "2.0.0");
+  assert.equal(packageJson.version, "2.0.1");
   assert.equal(codex.name, "ldk-github-project-ops");
   assert.equal(codex.version.split("+")[0], packageJson.version);
   assert.equal(claude.version, packageJson.version);
@@ -78,3 +78,19 @@ async function listFiles(directory, prefix = "") {
   }
   return output;
 }
+
+test("planning intake gates un-briefed goals before goal structure", async () => {
+  const intake = await readFile(join(root, "references", "planning-intake.md"), "utf8");
+  const create = await readFile(join(root, "skills", "github-create-work", "SKILL.md"), "utf8");
+
+  assert.match(create, /planning-intake\.md/u, "create-work must route through the intake reference");
+  assert.match(intake, /requirements-clarification skill/u, "capability-agnostic: names the skill class, not one vendor");
+  assert.doesNotMatch(intake, /superpowers:|obra\//u, "must not hard-couple to a specific plugin");
+  assert.match(intake, /refinement interview/iu, "inline fallback when no clarification skill exists");
+  assert.match(intake, /approved brief.*skips|skips? (the )?clarification/iu, "approved brief skips the gate");
+  assert.match(intake, /contract[\s\S]{0,120}never re-?clarified/iu, "contracted issues are not re-clarified");
+  assert.match(intake, /no\s+tracker (items|writes)/iu, "clarification performs no tracker writes");
+  assert.match(intake, /no worktrees? or (agent )?sessions/iu, "clarification spawns no execution runtime");
+  assert.match(intake, /execution.*only after (the )?issues exist/iu, "claim/execution waits for issues");
+  assert.match(intake, /course|film|content/iu, "domain-neutral example beyond software");
+});

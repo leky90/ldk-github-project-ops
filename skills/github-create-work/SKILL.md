@@ -11,6 +11,13 @@ before selecting objects. For every create, update, sync, breakdown, backlog, or
 view request, also read [project-setup.md](../../references/project-setup.md) and
 [tracker-routing.md](../../references/tracker-routing.md).
 
+Before building structure from an idea that has no approved brief, pass the
+intake gate in [planning-intake.md](../../references/planning-intake.md):
+clarify requirements first (through the host's requirements-clarification
+skill or an inline refinement interview), get the brief approved, and only
+then create planning objects. An approved brief or an issue with an existing
+contract skips the gate.
+
 1. Load and validate `.github-project-ops.json`; pin the owner, Project number or
    node ID, and allowed repositories. Never infer a different Project from a title,
    stale context, or another tracker. If an explicit GitHub request has no binding,
