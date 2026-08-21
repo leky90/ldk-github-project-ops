@@ -36,6 +36,14 @@ or close/reopen the Project only on a direct request with sufficient evidence.
 4. Group by repository milestone or outcome, then current role. Separate Ready,
    active, review, Ready to Deliver, Delivery Verification, blocked, decisions,
    stale handoffs, delivery mismatches, and recently completed work.
+   Render with the **Ops layout by default** (per-milestone progress strip +
+   🌳 clusters by dependency chain with sub-issues nested inline, "⟶ mở"
+   dependents and "← chờ" blockers, ❓ owner decisions, ▶ ready queue /
+   ⏸ waiting / 📊 totals); switch to the **Lanes layout** (one table per
+   role/department) when the user asks by department, weekly, or for
+   stakeholders. Tag every not-done item
+   `[Tier · Agent Model/effort · from main|stacked on #n]` per the governance
+   rubric. Follow [project-status-template.md](../../assets/project-status-template.md).
 5. Run `analyze-project-lifecycle.mjs` or `build-project-report.mjs` for snapshots.
    Apply [project-lifecycle.md](../../references/project-lifecycle.md):
    - closed Project with open work → explicit reopen decision;

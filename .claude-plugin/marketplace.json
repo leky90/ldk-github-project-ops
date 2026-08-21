@@ -9,8 +9,8 @@
       "name": "ldk-github-project-ops",
       "source": "./",
       "description": "Role-based GitHub Projects planning, execution, delivery, reporting, and repair.",
-      "version": "2.0.1"
+      "version": "2.0.2"
     }
   ],
-  "version": "2.0.1"
+  "version": "2.0.2"
 }

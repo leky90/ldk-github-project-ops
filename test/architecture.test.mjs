@@ -6,12 +6,12 @@ import test from "node:test";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 
-test("package exposes the same v0.2.0 plugin for Codex and Claude Code", async () => {
+test("package exposes the same v2.0.2 plugin for Codex and Claude Code", async () => {
   const codex = JSON.parse(await readFile(join(root, ".codex-plugin", "plugin.json"), "utf8"));
   const claude = JSON.parse(await readFile(join(root, ".claude-plugin", "plugin.json"), "utf8"));
   const marketplace = JSON.parse(await readFile(join(root, ".claude-plugin", "marketplace.json"), "utf8"));
   const packageJson = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
-  assert.equal(packageJson.version, "2.0.1");
+  assert.equal(packageJson.version, "2.0.2");
   assert.equal(codex.name, "ldk-github-project-ops");
   assert.equal(codex.version.split("+")[0], packageJson.version);
   assert.equal(claude.version, packageJson.version);
